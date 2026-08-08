@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#2E75B6">
+<title>打刻修正依頼（西軽精機）</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    background: #f2f4f7;
+    margin: 0;
+    padding: 24px 16px 60px;
+    color: #1b2430;
+  }
+  .card {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+    padding: 28px 24px;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 0 0 4px;
+    color: #1F4E79;
+  }
+  .sub {
+    font-size: 13px;
+    color: #666;
+    margin: 0 0 24px;
+  }
+  label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 18px 0 6px;
+  }
+  select, input[type="date"], input[type="time"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fff;
+  }
+  textarea { resize: vertical; min-height: 70px; }
+  .hint {
+    font-size: 12.5px;
+    color: #2E75B6;
+    margin-top: 6px;
+    min-height: 1.2em;
+  }
+  #submitBtn {
+    width: 100%;
+    margin-top: 26px;
+    padding: 13px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    background: #2E75B6;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #submitBtn:disabled { background: #9db8cc; cursor: default; }
+  #signedInAs {
+    font-size: 13px;
+    color: #226b4e;
+    background: #e2f2ea;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 18px;
+  }
+  #message {
+    margin-top: 18px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 14px;
+    display: none;
+  }
+  #message.ok   { display: block; background: #e2f2ea; color: #226b4e; }
+  #message.err  { display: block; background: #fbe4e4; color: #92200d; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>打刻修正依頼</h1>
+  <p class="sub">打刻ミスの修正を依頼するフォームです。送信後、総務が確認して打刻ログへ反映します。</p>
+
+  <div id="loginArea">
+    <div id="g_id_onload"
+         data-client_id="800178947678-ue8faa8jscidc84656i4ch1d4j0n9lks.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse">
+    </div>
+    <div class="g_id_signin" data-type="standard"></div>
+  </div>
+
+  <div id="formArea" class="hidden">
+    <div id="signedInAs"></div>
+
+    <label for="taishouDate">修正対象日</label>
+    <input type="date" id="taishouDate">
+
+    <label for="content">修正内容</label>
+    <select id="content">
+      <option value="">選択してください</option>
+      <option value="出勤時刻の修正">出勤時刻の修正</option>
+      <option value="退勤時刻の修正">退勤時刻の修正</option>
+      <option value="外出時刻の修正">外出時刻の修正</option>
+      <option value="帰社時刻の修正">帰社時刻の修正</option>
+      <option value="打刻の追加">打刻の追加</option>
+      <option value="打刻の削除">打刻の削除</option>
+    </select>
+
+    <div id="addTypeArea" class="hidden">
+      <label for="addType">対象の打刻種別</label>
+      <select id="addType">
+        <option value="">選択してください</option>
+        <option value="出勤">出勤</option>
+        <option value="退勤">退勤</option>
+        <option value="外出">外出</option>
+        <option value="帰社">帰社</option>
+      </select>
+    </div>
+
+    <div id="timeArea">
+      <label for="jissaiTime">正しい時刻</label>
+      <input type="time" id="jissaiTime">
+      <p class="hint" id="actualPunchHint"></p>
+    </div>
+
+    <label for="riyu">修正理由</label>
+    <textarea id="riyu" placeholder="例：退勤の打刻を忘れた"></textarea>
+
+    <button id="submitBtn">送信</button>
+    <div id="message"></div>
+  </div>
+</div>
+
+<script>
+  // ── PWAインストール対応 ──
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // ── GAS呼び出し先URL ──
+  // verifyGoogleToken_・getActualPunch・submitShuuseiはSession.getActiveUser()を使わず
+  // トークン自体を検証する方式なので、アクセス制限の無いタブレット用デプロイのURLを使う
+  // （制限ありのデプロイをクロスオリジンで呼ぶとCORSでブロックされるため。実機検証済み）
+  const GAS_URL = 'https://script.google.com/a/macros/nishikaru.co.jp/s/AKfycbzht6wuAjcOKeiGL20sHIEE1ip10b7haJfb5lFNahg7XN-ZBKZtwhxE3sfPhydCA21xYg/exec';
+
+  let idToken = null;
+  let myEmail = null;
+
+  const contentToDakokuType = {
+    '出勤時刻の修正': '出勤',
+    '退勤時刻の修正': '退勤',
+    '外出時刻の修正': '外出',
+    '帰社時刻の修正': '帰社',
+  };
+
+  function handleCredentialResponse(response) {
+    idToken = response.credential;
+    // ここでは画面表示用にトークンの中身をそのままデコードするだけ（改ざんされていても
+    // 見た目が変わるだけで実害はない）。実際の本人確認は各API呼び出し時にGAS側
+    // （verifyGoogleToken_）が毎回トークンをGoogleに照会して行う（なりすまし防止）
+    const payload = JSON.parse(atob(idToken.split('.')[1]));
+    myEmail = payload.email;
+    document.getElementById('signedInAs').textContent = 'ログイン中：' + myEmail;
+    document.getElementById('loginArea').classList.add('hidden');
+    document.getElementById('formArea').classList.remove('hidden');
+  }
+
+  const contentSelect  = document.getElementById('content');
+  const addTypeArea    = document.getElementById('addTypeArea');
+  const addTypeSelect  = document.getElementById('addType');
+  const timeArea       = document.getElementById('timeArea');
+  const jissaiTimeInput= document.getElementById('jissaiTime');
+  const dateInput      = document.getElementById('taishouDate');
+  const hintEl         = document.getElementById('actualPunchHint');
+
+  function updateFieldVisibility() {
+    const content = contentSelect.value;
+    addTypeArea.classList.toggle('hidden', content !== '打刻の追加' && content !== '打刻の削除');
+    timeArea.classList.toggle('hidden', content === '打刻の削除');
+  }
+
+  // 修正対象日・修正内容（○○時刻の修正）が両方揃ったら、現在の実打刻時刻を自動取得して
+  // 入力欄に反映する（自動補正機能。ゼロから時刻を入力させない）
+  function fetchActualPunch() {
+    const content     = contentSelect.value;
+    const dakokuType  = contentToDakokuType[content];
+    const dateStr     = dateInput.value; // yyyy-MM-dd
+    hintEl.textContent = '';
+    if (!dakokuType || !dateStr || !idToken) return;
+    const dateStrSlash = dateStr.replace(/-/g, '/');
+    hintEl.textContent = '現在の打刻を確認中...';
+    fetch(GAS_URL + '?mode=getActualPunch&token=' + encodeURIComponent(idToken) +
+      '&date=' + encodeURIComponent(dateStrSlash) + '&dakokuType=' + encodeURIComponent(dakokuType))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) { hintEl.textContent = '確認できませんでした：' + data.error; return; }
+        if (data.time) {
+          hintEl.textContent = '現在の実打刻：' + data.time + '（下の欄に自動入力しました。必要に応じて修正してください）';
+          jissaiTimeInput.value = data.time;
+        } else {
+          hintEl.textContent = 'その日・その種別の打刻は見つかりませんでした。';
+        }
+      })
+      .catch(() => { hintEl.textContent = '確認中にエラーが発生しました。'; });
+  }
+
+  contentSelect.addEventListener('change', () => { updateFieldVisibility(); fetchActualPunch(); });
+  dateInput.addEventListener('change', fetchActualPunch);
+
+  document.getElementById('submitBtn').addEventListener('click', () => {
+    const taishouDate = dateInput.value ? dateInput.value.replace(/-/g, '/') : '';
+    const content     = contentSelect.value;
+    const addType     = addTypeSelect.value;
+    const jissaiTime  = jissaiTimeInput.value;
+    const riyu        = document.getElementById('riyu').value.trim();
+    const messageEl   = document.getElementById('message');
+    messageEl.className = ''; messageEl.textContent = '';
+
+    if (!taishouDate || !content || !riyu) {
+      messageEl.className = 'err'; messageEl.textContent = '未入力の項目があります。'; return;
+    }
+    if ((content === '打刻の追加' || content === '打刻の削除') && !addType) {
+      messageEl.className = 'err'; messageEl.textContent = '対象の打刻種別を選んでください。'; return;
+    }
+    if (content !== '打刻の削除' && !jissaiTime) {
+      messageEl.className = 'err'; messageEl.textContent = '正しい時刻を入力してください。'; return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = '送信中...';
+
+    // 2026-08-06：Content-Typeをapplication/jsonにするとCORSのプリフライト（OPTIONS）が
+    // 発生し、GAS Web Appは対応していないため失敗する。文字列のままPOSTする
+    // （Content-Type省略時はtext/plainになりプリフライトを回避できる。GAS側は
+    // e.postData.contentsを文字列として受け取りJSON.parseするので実害は無い）
+    fetch(GAS_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'submitShuusei', token: idToken,
+        taishouDate, content, addType, jissaiTime, riyu,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          messageEl.className = 'ok';
+          messageEl.textContent = '送信しました（申請ID：' + data.appId + '）。総務の確認をお待ちください。';
+          document.getElementById('riyu').value = '';
+          jissaiTimeInput.value = '';
+          contentSelect.value = '';
+          updateFieldVisibility();
+        } else {
+          messageEl.className = 'err';
+          messageEl.textContent = '送信できませんでした：' + data.message;
+        }
+      })
+      .catch((e) => {
+        messageEl.className = 'err';
+        messageEl.textContent = '通信エラー：' + e;
+      })
+      .finally(() => { btn.disabled = false; btn.textContent = '送信'; });
+  });
+</script>
+</body>
+</html>
