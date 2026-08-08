@@ -88,6 +88,43 @@
   #message.ok   { display: block; background: #e2f2ea; color: #226b4e; }
   #message.err  { display: block; background: #fbe4e4; color: #92200d; }
   .hidden { display: none !important; }
+  .card + .card { margin-top: 16px; }
+  h2 { font-size: 16px; margin: 0 0 14px; color: #1F4E79; }
+  .req-item {
+    border: 1px solid #e2e6ea;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    font-size: 13.5px;
+  }
+  .req-item .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .req-status {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .req-status.wait { background: #fff2cc; color: #7f6000; }
+  .req-status.done { background: #e2f2ea; color: #226b4e; }
+  .req-edit-btn {
+    font-size: 12.5px;
+    padding: 5px 12px;
+    border: 1px solid #2E75B6;
+    color: #2E75B6;
+    background: #fff;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  #editingNotice {
+    display: none;
+    background: #fff2cc;
+    color: #7f6000;
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+  }
 </style>
 </head>
 <body>
@@ -105,6 +142,8 @@
 
   <div id="formArea" class="hidden">
     <div id="signedInAs"></div>
+
+    <p id="editingNotice"></p>
 
     <label for="taishouDate">修正対象日</label>
     <input type="date" id="taishouDate">
@@ -141,8 +180,14 @@
     <textarea id="riyu" placeholder="例：退勤の打刻を忘れた"></textarea>
 
     <button id="submitBtn">送信</button>
+    <button id="cancelEditBtn" class="hidden" style="width:100%;margin-top:10px;padding:11px;font-size:14px;background:#fff;color:#666;border:1px solid #ccc;border-radius:6px;cursor:pointer;">編集をやめて新規作成に戻る</button>
     <div id="message"></div>
   </div>
+</div>
+
+<div class="card hidden" id="myRequestsCard">
+  <h2>自分の申請一覧</h2>
+  <div id="myRequestsList"></div>
 </div>
 
 <script>
@@ -167,6 +212,8 @@
     '帰社時刻の修正': '帰社',
   };
 
+  let editingAppId = null; // nullなら新規作成、appIdが入っていれば編集中
+
   function handleCredentialResponse(response) {
     idToken = response.credential;
     // ここでは画面表示用にトークンの中身をそのままデコードするだけ（改ざんされていても
@@ -177,7 +224,72 @@
     document.getElementById('signedInAs').textContent = 'ログイン中：' + myEmail;
     document.getElementById('loginArea').classList.add('hidden');
     document.getElementById('formArea').classList.remove('hidden');
+    document.getElementById('myRequestsCard').classList.remove('hidden');
+    loadMyRequests();
   }
+
+  // ── 自分の申請一覧 ──
+  function loadMyRequests() {
+    const listEl = document.getElementById('myRequestsList');
+    listEl.textContent = '読み込み中...';
+    fetch(GAS_URL + '?mode=myShuuseiRequests&token=' + encodeURIComponent(idToken))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) { listEl.textContent = '取得できませんでした：' + data.error; return; }
+        if (data.list.length === 0) { listEl.textContent = 'まだ申請はありません。'; return; }
+        listEl.innerHTML = '';
+        data.list.forEach((req) => {
+          const isWait = req.status === '対応待';
+          const div = document.createElement('div');
+          div.className = 'req-item';
+          div.innerHTML =
+            '<div class="row"><strong>' + req.taishouDate + '　' + req.content + '</strong>' +
+            '<span class="req-status ' + (isWait ? 'wait' : 'done') + '">' + req.status + '</span></div>' +
+            '<div>' + (req.jissaiTime ? '正しい時刻：' + req.jissaiTime + '　' : '') + '理由：' + req.riyu + '</div>';
+          if (isWait) {
+            const btn = document.createElement('button');
+            btn.className = 'req-edit-btn';
+            btn.textContent = '編集する';
+            btn.style.marginTop = '8px';
+            btn.addEventListener('click', () => startEditing(req));
+            div.appendChild(btn);
+          }
+          listEl.appendChild(div);
+        });
+      })
+      .catch(() => { listEl.textContent = '取得中にエラーが発生しました。'; });
+  }
+
+  function startEditing(req) {
+    editingAppId = req.appId;
+    dateInput.value = req.taishouDate.replace(/\//g, '-');
+    contentSelect.value = req.content;
+    addTypeSelect.value = req.addType || '';
+    jissaiTimeInput.value = req.jissaiTime || '';
+    document.getElementById('riyu').value = req.riyu;
+    updateFieldVisibility();
+    document.getElementById('editingNotice').style.display = 'block';
+    document.getElementById('editingNotice').textContent = '申請ID「' + req.appId + '」を編集中です。';
+    document.getElementById('cancelEditBtn').classList.remove('hidden');
+    document.getElementById('submitBtn').textContent = '更新する';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function stopEditing() {
+    editingAppId = null;
+    dateInput.value = '';
+    contentSelect.value = '';
+    addTypeSelect.value = '';
+    jissaiTimeInput.value = '';
+    document.getElementById('riyu').value = '';
+    hintEl.textContent = '';
+    updateFieldVisibility();
+    document.getElementById('editingNotice').style.display = 'none';
+    document.getElementById('cancelEditBtn').classList.add('hidden');
+    document.getElementById('submitBtn').textContent = '送信';
+  }
+
+  document.getElementById('cancelEditBtn').addEventListener('click', stopEditing);
 
   const contentSelect  = document.getElementById('content');
   const addTypeArea    = document.getElementById('addTypeArea');
@@ -241,38 +353,37 @@
     }
 
     const btn = document.getElementById('submitBtn');
-    btn.disabled = true; btn.textContent = '送信中...';
+    const isEditing = !!editingAppId;
+    btn.disabled = true; btn.textContent = isEditing ? '更新中...' : '送信中...';
+
+    const payload = isEditing
+      ? { action: 'updateShuusei', token: idToken, appId: editingAppId, taishouDate, content, addType, jissaiTime, riyu }
+      : { action: 'submitShuusei', token: idToken, taishouDate, content, addType, jissaiTime, riyu };
 
     // 2026-08-06：Content-Typeをapplication/jsonにするとCORSのプリフライト（OPTIONS）が
     // 発生し、GAS Web Appは対応していないため失敗する。文字列のままPOSTする
     // （Content-Type省略時はtext/plainになりプリフライトを回避できる。GAS側は
     // e.postData.contentsを文字列として受け取りJSON.parseするので実害は無い）
-    fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'submitShuusei', token: idToken,
-        taishouDate, content, addType, jissaiTime, riyu,
-      }),
-    })
+    fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
       .then((r) => r.json())
       .then((data) => {
         if (data.success) {
           messageEl.className = 'ok';
-          messageEl.textContent = '送信しました（申請ID：' + data.appId + '）。総務の確認をお待ちください。';
-          document.getElementById('riyu').value = '';
-          jissaiTimeInput.value = '';
-          contentSelect.value = '';
-          updateFieldVisibility();
+          messageEl.textContent = (isEditing ? '更新しました' : '送信しました') + '（申請ID：' + data.appId + '）。総務の確認をお待ちください。';
+          stopEditing();
+          loadMyRequests();
         } else {
           messageEl.className = 'err';
-          messageEl.textContent = '送信できませんでした：' + data.message;
+          messageEl.textContent = (isEditing ? '更新できませんでした：' : '送信できませんでした：') + data.message;
         }
       })
       .catch((e) => {
         messageEl.className = 'err';
         messageEl.textContent = '通信エラー：' + e;
       })
-      .finally(() => { btn.disabled = false; btn.textContent = '送信'; });
+      // stopEditing()が成功時に呼ばれてeditingAppIdをリセットしている可能性があるため、
+      // ここでは（送信前に固定したisEditingではなく）現在のeditingAppIdを見てラベルを決める
+      .finally(() => { btn.disabled = false; btn.textContent = editingAppId ? '更新する' : '送信'; });
   });
 </script>
 </body>
