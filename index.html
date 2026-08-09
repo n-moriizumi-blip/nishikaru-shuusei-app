@@ -244,7 +244,7 @@
       <span class="desc">打刻ミスの修正を依頼します</span>
     </button>
     <button class="type-choice" onclick="showSection('chokkouChokki')">
-      直行直帰届
+      出張申請
       <span class="desc">直行・直帰・出張を事前に届け出ます</span>
     </button>
   </div>
@@ -354,11 +354,11 @@
   </div>
 </div>
 
-<!-- ── 直行直帰届 ── -->
+<!-- ── 出張申請（直行直帰届） ── -->
 <div class="card hidden" id="chokkouChokkiCard">
   <div class="card-header">
     <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
-    <h1>直行直帰届</h1>
+    <h1>出張申請</h1>
     <p class="sub">直行・直帰・出張を事前に届け出るフォームです。送信すると同時に打刻の記録として扱われるため、翌朝の「打刻漏れ」通知は出ません。</p>
   </div>
   <div class="card-body">
@@ -401,7 +401,7 @@
 
 <div class="card hidden" id="chokkouChokkiRequestsCard">
   <div class="card-body">
-    <h2>自分の直行直帰届の一覧</h2>
+    <h2>自分の出張申請の一覧</h2>
     <div id="chokkouChokkiRequestsList"></div>
   </div>
 </div>
@@ -945,7 +945,7 @@
   });
 
   // ============================================================
-  // 直行直帰届
+  // 出張申請（直行直帰届）
   // ============================================================
   let chokkouChokkiEditingAppId = null;
 
