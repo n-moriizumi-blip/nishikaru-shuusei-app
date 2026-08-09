@@ -58,6 +58,7 @@
     min-height: 1.2em;
   }
   .radio-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-group.row { flex-direction: row; }
   .radio-pill {
     display: flex;
     align-items: center;
@@ -68,6 +69,7 @@
     cursor: pointer;
     font-size: 14.5px;
   }
+  .radio-group.row .radio-pill { flex: 1; justify-content: center; }
   .radio-pill:has(input:checked) {
     border-color: #2E75B6;
     background: #eaf2fa;
@@ -75,7 +77,7 @@
     color: #1F4E79;
   }
   .radio-pill input { accent-color: #2E75B6; width: 17px; height: 17px; }
-  #submitBtn {
+  .primary-btn {
     width: 100%;
     margin-top: 26px;
     padding: 13px;
@@ -87,7 +89,18 @@
     border-radius: 6px;
     cursor: pointer;
   }
-  #submitBtn:disabled { background: #9db8cc; cursor: default; }
+  .primary-btn:disabled { background: #9db8cc; cursor: default; }
+  .secondary-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 11px;
+    font-size: 14px;
+    background: #fff;
+    color: #666;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+  }
   #signedInAs {
     font-size: 13px;
     color: #226b4e;
@@ -96,15 +109,15 @@
     padding: 8px 12px;
     margin-bottom: 18px;
   }
-  #message {
+  .message {
     margin-top: 18px;
     padding: 12px 14px;
     border-radius: 6px;
     font-size: 14px;
     display: none;
   }
-  #message.ok   { display: block; background: #e2f2ea; color: #226b4e; }
-  #message.err  { display: block; background: #fbe4e4; color: #92200d; }
+  .message.ok   { display: block; background: #e2f2ea; color: #226b4e; }
+  .message.err  { display: block; background: #fbe4e4; color: #92200d; }
   .hidden { display: none !important; }
   .card + .card { margin-top: 16px; }
   h2 { font-size: 16px; margin: 0 0 14px; color: #1F4E79; }
@@ -133,8 +146,9 @@
     background: #fff;
     border-radius: 999px;
     cursor: pointer;
+    margin-top: 8px;
   }
-  #editingNotice {
+  .editing-notice {
     display: none;
     background: #fff2cc;
     color: #7f6000;
@@ -143,13 +157,37 @@
     border-radius: 6px;
     margin-bottom: 4px;
   }
+  /* ── 申請の種類を選ぶ画面 ── */
+  .type-choice {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+    border: 1px solid #dfe3e8;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #1F4E79;
+  }
+  .type-choice:hover { border-color: #2E75B6; background: #f5f9fd; }
+  .type-choice .desc { display: block; font-size: 12.5px; font-weight: 400; color: #777; margin-top: 3px; }
+  .back-link {
+    display: inline-block;
+    font-size: 13px;
+    color: #2E75B6;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>打刻修正依頼</h1>
-  <p class="sub">打刻ミスの修正を依頼するフォームです。送信後、総務が確認して打刻ログへ反映します。</p>
 
+<div class="card" id="loginCard">
+  <h1>勤怠申請</h1>
+  <p class="sub">西軽精機の勤怠関連の申請アプリです。</p>
   <div id="loginArea">
     <div id="g_id_onload"
          data-client_id="800178947678-ue8faa8jscidc84656i4ch1d4j0n9lks.apps.googleusercontent.com"
@@ -159,53 +197,112 @@
     </div>
     <div class="g_id_signin" data-type="standard"></div>
   </div>
-
-  <div id="formArea" class="hidden">
-    <div id="signedInAs"></div>
-
-    <p id="editingNotice"></p>
-
-    <label for="taishouDate">修正対象日</label>
-    <input type="date" id="taishouDate">
-
-    <label>修正内容</label>
-    <div class="radio-group" id="contentGroup">
-      <label class="radio-pill"><input type="radio" name="content" value="出勤時刻の修正"> 出勤時刻の修正</label>
-      <label class="radio-pill"><input type="radio" name="content" value="退勤時刻の修正"> 退勤時刻の修正</label>
-      <label class="radio-pill"><input type="radio" name="content" value="外出時刻の修正"> 外出時刻の修正</label>
-      <label class="radio-pill"><input type="radio" name="content" value="帰社時刻の修正"> 帰社時刻の修正</label>
-      <label class="radio-pill"><input type="radio" name="content" value="打刻の追加"> 打刻の追加</label>
-      <label class="radio-pill"><input type="radio" name="content" value="打刻の削除"> 打刻の削除</label>
-    </div>
-
-    <div id="addTypeArea" class="hidden">
-      <label>対象の打刻種別</label>
-      <div class="radio-group" id="addTypeGroup">
-        <label class="radio-pill"><input type="radio" name="addType" value="出勤"> 出勤</label>
-        <label class="radio-pill"><input type="radio" name="addType" value="退勤"> 退勤</label>
-        <label class="radio-pill"><input type="radio" name="addType" value="外出"> 外出</label>
-        <label class="radio-pill"><input type="radio" name="addType" value="帰社"> 帰社</label>
-      </div>
-    </div>
-
-    <div id="timeArea">
-      <label for="jissaiTime">正しい時刻</label>
-      <input type="time" id="jissaiTime">
-      <p class="hint" id="actualPunchHint"></p>
-    </div>
-
-    <label for="riyu">修正理由</label>
-    <textarea id="riyu" placeholder="例：退勤の打刻を忘れた"></textarea>
-
-    <button id="submitBtn">送信</button>
-    <button id="cancelEditBtn" class="hidden" style="width:100%;margin-top:10px;padding:11px;font-size:14px;background:#fff;color:#666;border:1px solid #ccc;border-radius:6px;cursor:pointer;">編集をやめて新規作成に戻る</button>
-    <div id="message"></div>
-  </div>
 </div>
 
-<div class="card hidden" id="myRequestsCard">
-  <h2>自分の申請一覧</h2>
-  <div id="myRequestsList"></div>
+<!-- ── 申請の種類を選ぶ画面 ── -->
+<div class="card hidden" id="typeSelectCard">
+  <div id="signedInAs"></div>
+  <h1>申請の種類を選ぶ</h1>
+  <button class="type-choice" onclick="showSection('shuusei')">
+    打刻修正依頼
+    <span class="desc">打刻ミスの修正を依頼します</span>
+  </button>
+  <button class="type-choice" onclick="showSection('zangyou')">
+    残業申請
+    <span class="desc">残業の予定を事前に申請します</span>
+  </button>
+</div>
+
+<!-- ── 打刻修正依頼 ── -->
+<div class="card hidden" id="shuuseiCard">
+  <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
+  <h1>打刻修正依頼</h1>
+  <p class="sub">打刻ミスの修正を依頼するフォームです。送信後、総務が確認して打刻ログへ反映します。</p>
+
+  <p class="editing-notice" id="shuuseiEditingNotice"></p>
+
+  <label for="shuuseiDate">修正対象日</label>
+  <input type="date" id="shuuseiDate">
+
+  <label>修正内容</label>
+  <div class="radio-group" id="contentGroup">
+    <label class="radio-pill"><input type="radio" name="content" value="出勤時刻の修正"> 出勤時刻の修正</label>
+    <label class="radio-pill"><input type="radio" name="content" value="退勤時刻の修正"> 退勤時刻の修正</label>
+    <label class="radio-pill"><input type="radio" name="content" value="外出時刻の修正"> 外出時刻の修正</label>
+    <label class="radio-pill"><input type="radio" name="content" value="帰社時刻の修正"> 帰社時刻の修正</label>
+    <label class="radio-pill"><input type="radio" name="content" value="打刻の追加"> 打刻の追加</label>
+    <label class="radio-pill"><input type="radio" name="content" value="打刻の削除"> 打刻の削除</label>
+  </div>
+
+  <div id="addTypeArea" class="hidden">
+    <label>対象の打刻種別</label>
+    <div class="radio-group" id="addTypeGroup">
+      <label class="radio-pill"><input type="radio" name="addType" value="出勤"> 出勤</label>
+      <label class="radio-pill"><input type="radio" name="addType" value="退勤"> 退勤</label>
+      <label class="radio-pill"><input type="radio" name="addType" value="外出"> 外出</label>
+      <label class="radio-pill"><input type="radio" name="addType" value="帰社"> 帰社</label>
+    </div>
+  </div>
+
+  <div id="shuuseiTimeArea">
+    <label for="jissaiTime">正しい時刻</label>
+    <input type="time" id="jissaiTime">
+    <p class="hint" id="actualPunchHint"></p>
+  </div>
+
+  <label for="shuuseiRiyu">修正理由</label>
+  <textarea id="shuuseiRiyu" placeholder="例：退勤の打刻を忘れた"></textarea>
+
+  <button class="primary-btn" id="shuuseiSubmitBtn">送信</button>
+  <button class="secondary-btn hidden" id="shuuseiCancelEditBtn">編集をやめて新規作成に戻る</button>
+  <div class="message" id="shuuseiMessage"></div>
+</div>
+
+<div class="card hidden" id="shuuseiRequestsCard">
+  <h2>自分の打刻修正依頼の一覧</h2>
+  <div id="shuuseiRequestsList"></div>
+</div>
+
+<!-- ── 残業申請 ── -->
+<div class="card hidden" id="zangyouCard">
+  <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
+  <h1>残業申請</h1>
+  <p class="sub">残業を事前に申請するフォームです。予定が変わった場合は下の一覧から編集できます。</p>
+
+  <p class="editing-notice" id="zangyouEditingNotice"></p>
+
+  <label for="zangyouDate">残業予定日</label>
+  <input type="date" id="zangyouDate">
+
+  <label for="zangyouStart">残業開始時刻</label>
+  <input type="time" id="zangyouStart">
+
+  <label for="zangyouEnd">予定終了時刻</label>
+  <input type="time" id="zangyouEnd">
+
+  <label>昼休憩（45分間）を取りましたか？<span class="hint" style="display:inline;margin:0;">（休日出勤の場合のみ）</span></label>
+  <div class="radio-group row" id="hiruKyukeiGroup">
+    <label class="radio-pill"><input type="radio" name="hiruKyukei" value="はい"> はい</label>
+    <label class="radio-pill"><input type="radio" name="hiruKyukei" value="いいえ"> いいえ</label>
+  </div>
+
+  <label>午後休憩（15分間）を取りましたか？<span class="hint" style="display:inline;margin:0;">（休日出勤の場合のみ）</span></label>
+  <div class="radio-group row" id="gogoKyukeiGroup">
+    <label class="radio-pill"><input type="radio" name="gogoKyukei" value="はい"> はい</label>
+    <label class="radio-pill"><input type="radio" name="gogoKyukei" value="いいえ"> いいえ</label>
+  </div>
+
+  <label for="zangyouRiyu">残業理由（社名・図番・内容）</label>
+  <textarea id="zangyouRiyu" placeholder="例：〇〇社△△図面の追加加工のため"></textarea>
+
+  <button class="primary-btn" id="zangyouSubmitBtn">送信</button>
+  <button class="secondary-btn hidden" id="zangyouCancelEditBtn">編集をやめて新規作成に戻る</button>
+  <div class="message" id="zangyouMessage"></div>
+</div>
+
+<div class="card hidden" id="zangyouRequestsCard">
+  <h2>自分の残業申請の一覧</h2>
+  <div id="zangyouRequestsList"></div>
 </div>
 
 <script>
@@ -215,23 +312,14 @@
   }
 
   // ── GAS呼び出し先URL ──
-  // verifyGoogleToken_・getActualPunch・submitShuuseiはSession.getActiveUser()を使わず
-  // トークン自体を検証する方式なので、アクセス制限の無いタブレット用デプロイのURLを使う
-  // （制限ありのデプロイをクロスオリジンで呼ぶとCORSでブロックされるため。実機検証済み）
+  // 本人確認はSession.getActiveUser()を使わずトークン自体を検証する方式なので、
+  // アクセス制限の無いタブレット用デプロイのURLを使う（制限ありのデプロイをクロスオリジンで
+  // 呼ぶとCORSでブロックされるため。実機検証済み）
   const GAS_URL = 'https://script.google.com/a/macros/nishikaru.co.jp/s/AKfycbzht6wuAjcOKeiGL20sHIEE1ip10b7haJfb5lFNahg7XN-ZBKZtwhxE3sfPhydCA21xYg/exec';
 
   let idToken = null;
   let myEmail = null;
-  let editingAppId = null; // nullなら新規作成、appIdが入っていれば編集中
 
-  const contentToDakokuType = {
-    '出勤時刻の修正': '出勤',
-    '退勤時刻の修正': '退勤',
-    '外出時刻の修正': '外出',
-    '帰社時刻の修正': '帰社',
-  };
-
-  // ── ラジオボタンの値の読み書き用ヘルパー（selectのvalueと同じ感覚で使えるように） ──
   function getRadioValue(name) {
     const el = document.querySelector('input[name="' + name + '"]:checked');
     return el ? el.value : '';
@@ -248,15 +336,42 @@
     const payload = JSON.parse(atob(idToken.split('.')[1]));
     myEmail = payload.email;
     document.getElementById('signedInAs').textContent = 'ログイン中：' + myEmail;
-    document.getElementById('loginArea').classList.add('hidden');
-    document.getElementById('formArea').classList.remove('hidden');
-    document.getElementById('myRequestsCard').classList.remove('hidden');
-    loadMyRequests();
+    document.getElementById('loginCard').classList.add('hidden');
+    showSection('select');
   }
 
-  // ── 自分の申請一覧 ──
-  function loadMyRequests() {
-    const listEl = document.getElementById('myRequestsList');
+  // ── セクション切り替え ──
+  function showSection(name) {
+    ['typeSelectCard', 'shuuseiCard', 'shuuseiRequestsCard', 'zangyouCard', 'zangyouRequestsCard'].forEach((id) => {
+      document.getElementById(id).classList.add('hidden');
+    });
+    if (name === 'select') {
+      document.getElementById('typeSelectCard').classList.remove('hidden');
+    } else if (name === 'shuusei') {
+      document.getElementById('shuuseiCard').classList.remove('hidden');
+      document.getElementById('shuuseiRequestsCard').classList.remove('hidden');
+      loadShuuseiRequests();
+    } else if (name === 'zangyou') {
+      document.getElementById('zangyouCard').classList.remove('hidden');
+      document.getElementById('zangyouRequestsCard').classList.remove('hidden');
+      loadZangyouRequests();
+    }
+    window.scrollTo({ top: 0 });
+  }
+
+  // ============================================================
+  // 打刻修正依頼
+  // ============================================================
+  const contentToDakokuType = {
+    '出勤時刻の修正': '出勤',
+    '退勤時刻の修正': '退勤',
+    '外出時刻の修正': '外出',
+    '帰社時刻の修正': '帰社',
+  };
+  let shuuseiEditingAppId = null;
+
+  function loadShuuseiRequests() {
+    const listEl = document.getElementById('shuuseiRequestsList');
     listEl.textContent = '読み込み中...';
     fetch(GAS_URL + '?mode=myShuuseiRequests&token=' + encodeURIComponent(idToken))
       .then((r) => r.json())
@@ -276,8 +391,7 @@
             const btn = document.createElement('button');
             btn.className = 'req-edit-btn';
             btn.textContent = '編集する';
-            btn.style.marginTop = '8px';
-            btn.addEventListener('click', () => startEditing(req));
+            btn.addEventListener('click', () => startEditingShuusei(req));
             div.appendChild(btn);
           }
           listEl.appendChild(div);
@@ -286,104 +400,104 @@
       .catch(() => { listEl.textContent = '取得中にエラーが発生しました。'; });
   }
 
-  function startEditing(req) {
-    editingAppId = req.appId;
-    dateInput.value = req.taishouDate.replace(/\//g, '-');
+  function startEditingShuusei(req) {
+    shuuseiEditingAppId = req.appId;
+    shuuseiDateInput.value = req.taishouDate.replace(/\//g, '-');
     setRadioValue('content', req.content);
     setRadioValue('addType', req.addType || '');
     jissaiTimeInput.value = req.jissaiTime || '';
-    document.getElementById('riyu').value = req.riyu;
-    updateFieldVisibility();
-    document.getElementById('editingNotice').style.display = 'block';
-    document.getElementById('editingNotice').textContent = '申請ID「' + req.appId + '」を編集中です。';
-    document.getElementById('cancelEditBtn').classList.remove('hidden');
-    document.getElementById('submitBtn').textContent = '更新する';
+    document.getElementById('shuuseiRiyu').value = req.riyu;
+    updateShuuseiFieldVisibility();
+    document.getElementById('shuuseiEditingNotice').style.display = 'block';
+    document.getElementById('shuuseiEditingNotice').textContent = '申請ID「' + req.appId + '」を編集中です。';
+    document.getElementById('shuuseiCancelEditBtn').classList.remove('hidden');
+    document.getElementById('shuuseiSubmitBtn').textContent = '更新する';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function stopEditing() {
-    editingAppId = null;
-    dateInput.value = '';
+  function stopEditingShuusei() {
+    shuuseiEditingAppId = null;
+    shuuseiDateInput.value = '';
     setRadioValue('content', '');
     setRadioValue('addType', '');
     jissaiTimeInput.value = '';
-    document.getElementById('riyu').value = '';
-    hintEl.textContent = '';
-    updateFieldVisibility();
-    document.getElementById('editingNotice').style.display = 'none';
-    document.getElementById('cancelEditBtn').classList.add('hidden');
-    document.getElementById('submitBtn').textContent = '送信';
+    document.getElementById('shuuseiRiyu').value = '';
+    actualPunchHintEl.textContent = '';
+    updateShuuseiFieldVisibility();
+    document.getElementById('shuuseiEditingNotice').style.display = 'none';
+    document.getElementById('shuuseiCancelEditBtn').classList.add('hidden');
+    document.getElementById('shuuseiSubmitBtn').textContent = '送信';
   }
 
-  document.getElementById('cancelEditBtn').addEventListener('click', stopEditing);
+  document.getElementById('shuuseiCancelEditBtn').addEventListener('click', stopEditingShuusei);
 
-  const addTypeArea    = document.getElementById('addTypeArea');
-  const timeArea       = document.getElementById('timeArea');
-  const jissaiTimeInput= document.getElementById('jissaiTime');
-  const dateInput      = document.getElementById('taishouDate');
-  const hintEl         = document.getElementById('actualPunchHint');
+  const addTypeArea      = document.getElementById('addTypeArea');
+  const shuuseiTimeArea  = document.getElementById('shuuseiTimeArea');
+  const jissaiTimeInput  = document.getElementById('jissaiTime');
+  const shuuseiDateInput = document.getElementById('shuuseiDate');
+  const actualPunchHintEl= document.getElementById('actualPunchHint');
 
-  function updateFieldVisibility() {
+  function updateShuuseiFieldVisibility() {
     const content = getRadioValue('content');
     addTypeArea.classList.toggle('hidden', content !== '打刻の追加' && content !== '打刻の削除');
-    timeArea.classList.toggle('hidden', content === '打刻の削除');
+    shuuseiTimeArea.classList.toggle('hidden', content === '打刻の削除');
   }
 
   // 修正対象日・修正内容（○○時刻の修正）が両方揃ったら、現在の実打刻時刻を自動取得して
   // 入力欄に反映する（自動補正機能。ゼロから時刻を入力させない）
   function fetchActualPunch() {
-    const content     = getRadioValue('content');
-    const dakokuType  = contentToDakokuType[content];
-    const dateStr     = dateInput.value; // yyyy-MM-dd
-    hintEl.textContent = '';
+    const content    = getRadioValue('content');
+    const dakokuType = contentToDakokuType[content];
+    const dateStr    = shuuseiDateInput.value; // yyyy-MM-dd
+    actualPunchHintEl.textContent = '';
     if (!dakokuType || !dateStr || !idToken) return;
     const dateStrSlash = dateStr.replace(/-/g, '/');
-    hintEl.textContent = '現在の打刻を確認中...';
+    actualPunchHintEl.textContent = '現在の打刻を確認中...';
     fetch(GAS_URL + '?mode=getActualPunch&token=' + encodeURIComponent(idToken) +
       '&date=' + encodeURIComponent(dateStrSlash) + '&dakokuType=' + encodeURIComponent(dakokuType))
       .then((r) => r.json())
       .then((data) => {
-        if (!data.success) { hintEl.textContent = '確認できませんでした：' + data.error; return; }
+        if (!data.success) { actualPunchHintEl.textContent = '確認できませんでした：' + data.error; return; }
         if (data.time) {
-          hintEl.textContent = '現在の実打刻：' + data.time + '（下の欄に自動入力しました。必要に応じて修正してください）';
+          actualPunchHintEl.textContent = '現在の実打刻：' + data.time + '（下の欄に自動入力しました。必要に応じて修正してください）';
           jissaiTimeInput.value = data.time;
         } else {
-          hintEl.textContent = 'その日・その種別の打刻は見つかりませんでした。';
+          actualPunchHintEl.textContent = 'その日・その種別の打刻は見つかりませんでした。';
         }
       })
-      .catch(() => { hintEl.textContent = '確認中にエラーが発生しました。'; });
+      .catch(() => { actualPunchHintEl.textContent = '確認中にエラーが発生しました。'; });
   }
 
   document.querySelectorAll('input[name="content"]').forEach((r) => {
-    r.addEventListener('change', () => { updateFieldVisibility(); fetchActualPunch(); });
+    r.addEventListener('change', () => { updateShuuseiFieldVisibility(); fetchActualPunch(); });
   });
-  dateInput.addEventListener('change', fetchActualPunch);
+  shuuseiDateInput.addEventListener('change', fetchActualPunch);
 
-  document.getElementById('submitBtn').addEventListener('click', () => {
-    const taishouDate = dateInput.value ? dateInput.value.replace(/-/g, '/') : '';
+  document.getElementById('shuuseiSubmitBtn').addEventListener('click', () => {
+    const taishouDate = shuuseiDateInput.value ? shuuseiDateInput.value.replace(/-/g, '/') : '';
     const content     = getRadioValue('content');
     const addType     = getRadioValue('addType');
     const jissaiTime  = jissaiTimeInput.value;
-    const riyu        = document.getElementById('riyu').value.trim();
-    const messageEl   = document.getElementById('message');
-    messageEl.className = ''; messageEl.textContent = '';
+    const riyu        = document.getElementById('shuuseiRiyu').value.trim();
+    const messageEl   = document.getElementById('shuuseiMessage');
+    messageEl.className = 'message'; messageEl.textContent = '';
 
     if (!taishouDate || !content || !riyu) {
-      messageEl.className = 'err'; messageEl.textContent = '未入力の項目があります。'; return;
+      messageEl.className = 'message err'; messageEl.textContent = '未入力の項目があります。'; return;
     }
     if ((content === '打刻の追加' || content === '打刻の削除') && !addType) {
-      messageEl.className = 'err'; messageEl.textContent = '対象の打刻種別を選んでください。'; return;
+      messageEl.className = 'message err'; messageEl.textContent = '対象の打刻種別を選んでください。'; return;
     }
     if (content !== '打刻の削除' && !jissaiTime) {
-      messageEl.className = 'err'; messageEl.textContent = '正しい時刻を入力してください。'; return;
+      messageEl.className = 'message err'; messageEl.textContent = '正しい時刻を入力してください。'; return;
     }
 
-    const btn = document.getElementById('submitBtn');
-    const isEditing = !!editingAppId;
+    const btn = document.getElementById('shuuseiSubmitBtn');
+    const isEditing = !!shuuseiEditingAppId;
     btn.disabled = true; btn.textContent = isEditing ? '更新中...' : '送信中...';
 
     const payload = isEditing
-      ? { action: 'updateShuusei', token: idToken, appId: editingAppId, taishouDate, content, addType, jissaiTime, riyu }
+      ? { action: 'updateShuusei', token: idToken, appId: shuuseiEditingAppId, taishouDate, content, addType, jissaiTime, riyu }
       : { action: 'submitShuusei', token: idToken, taishouDate, content, addType, jissaiTime, riyu };
 
     // 2026-08-06：Content-Typeをapplication/jsonにするとCORSのプリフライト（OPTIONS）が
@@ -394,22 +508,127 @@
       .then((r) => r.json())
       .then((data) => {
         if (data.success) {
-          messageEl.className = 'ok';
+          messageEl.className = 'message ok';
           messageEl.textContent = (isEditing ? '更新しました' : '送信しました') + '（申請ID：' + data.appId + '）。総務の確認をお待ちください。';
-          stopEditing();
-          loadMyRequests();
+          stopEditingShuusei();
+          loadShuuseiRequests();
         } else {
-          messageEl.className = 'err';
+          messageEl.className = 'message err';
           messageEl.textContent = (isEditing ? '更新できませんでした：' : '送信できませんでした：') + data.message;
         }
       })
       .catch((e) => {
-        messageEl.className = 'err';
+        messageEl.className = 'message err';
         messageEl.textContent = '通信エラー：' + e;
       })
-      // stopEditing()が成功時に呼ばれてeditingAppIdをリセットしている可能性があるため、
-      // ここでは（送信前に固定したisEditingではなく）現在のeditingAppIdを見てラベルを決める
-      .finally(() => { btn.disabled = false; btn.textContent = editingAppId ? '更新する' : '送信'; });
+      .finally(() => { btn.disabled = false; btn.textContent = shuuseiEditingAppId ? '更新する' : '送信'; });
+  });
+
+  // ============================================================
+  // 残業申請
+  // ============================================================
+  let zangyouEditingAppId = null;
+
+  function loadZangyouRequests() {
+    const listEl = document.getElementById('zangyouRequestsList');
+    listEl.textContent = '読み込み中...';
+    fetch(GAS_URL + '?mode=myZangyouRequests&token=' + encodeURIComponent(idToken))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) { listEl.textContent = '取得できませんでした：' + data.error; return; }
+        if (data.list.length === 0) { listEl.textContent = 'まだ申請はありません。'; return; }
+        listEl.innerHTML = '';
+        data.list.forEach((req) => {
+          const isWait = req.status === '対応待';
+          const div = document.createElement('div');
+          div.className = 'req-item';
+          div.innerHTML =
+            '<div class="row"><strong>' + req.taishouDate + '　' + req.startTime + '〜' + req.endTime + '</strong>' +
+            '<span class="req-status ' + (isWait ? 'wait' : 'done') + '">' + req.status + '</span></div>' +
+            '<div>実残業：' + req.jitsuZangyou + '　理由：' + req.riyu + '</div>';
+          if (isWait) {
+            const btn = document.createElement('button');
+            btn.className = 'req-edit-btn';
+            btn.textContent = '編集する';
+            btn.addEventListener('click', () => startEditingZangyou(req));
+            div.appendChild(btn);
+          }
+          listEl.appendChild(div);
+        });
+      })
+      .catch(() => { listEl.textContent = '取得中にエラーが発生しました。'; });
+  }
+
+  function startEditingZangyou(req) {
+    zangyouEditingAppId = req.appId;
+    document.getElementById('zangyouDate').value = req.taishouDate.replace(/\//g, '-');
+    document.getElementById('zangyouStart').value = req.startTime;
+    document.getElementById('zangyouEnd').value = req.endTime;
+    setRadioValue('hiruKyukei', req.hiruKyukei || '');
+    setRadioValue('gogoKyukei', req.gogoKyukei || '');
+    document.getElementById('zangyouRiyu').value = req.riyu;
+    document.getElementById('zangyouEditingNotice').style.display = 'block';
+    document.getElementById('zangyouEditingNotice').textContent = '申請ID「' + req.appId + '」を編集中です。';
+    document.getElementById('zangyouCancelEditBtn').classList.remove('hidden');
+    document.getElementById('zangyouSubmitBtn').textContent = '更新する';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function stopEditingZangyou() {
+    zangyouEditingAppId = null;
+    document.getElementById('zangyouDate').value = '';
+    document.getElementById('zangyouStart').value = '';
+    document.getElementById('zangyouEnd').value = '';
+    setRadioValue('hiruKyukei', '');
+    setRadioValue('gogoKyukei', '');
+    document.getElementById('zangyouRiyu').value = '';
+    document.getElementById('zangyouEditingNotice').style.display = 'none';
+    document.getElementById('zangyouCancelEditBtn').classList.add('hidden');
+    document.getElementById('zangyouSubmitBtn').textContent = '送信';
+  }
+
+  document.getElementById('zangyouCancelEditBtn').addEventListener('click', stopEditingZangyou);
+
+  document.getElementById('zangyouSubmitBtn').addEventListener('click', () => {
+    const taishouDate = document.getElementById('zangyouDate').value.replace(/-/g, '/');
+    const startTime   = document.getElementById('zangyouStart').value;
+    const endTime     = document.getElementById('zangyouEnd').value;
+    const hiruKyukei  = getRadioValue('hiruKyukei');
+    const gogoKyukei  = getRadioValue('gogoKyukei');
+    const riyu        = document.getElementById('zangyouRiyu').value.trim();
+    const messageEl   = document.getElementById('zangyouMessage');
+    messageEl.className = 'message'; messageEl.textContent = '';
+
+    if (!taishouDate || !startTime || !endTime || !riyu) {
+      messageEl.className = 'message err'; messageEl.textContent = '未入力の項目があります。'; return;
+    }
+
+    const btn = document.getElementById('zangyouSubmitBtn');
+    const isEditing = !!zangyouEditingAppId;
+    btn.disabled = true; btn.textContent = isEditing ? '更新中...' : '送信中...';
+
+    const payload = isEditing
+      ? { action: 'updateZangyou', token: idToken, appId: zangyouEditingAppId, taishouDate, startTime, endTime, hiruKyukei, gogoKyukei, riyu }
+      : { action: 'submitZangyou', token: idToken, taishouDate, startTime, endTime, hiruKyukei, gogoKyukei, riyu };
+
+    fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          messageEl.className = 'message ok';
+          messageEl.textContent = (isEditing ? '更新しました' : '送信しました') + '（申請ID：' + data.appId + '）。総務の確認をお待ちください。';
+          stopEditingZangyou();
+          loadZangyouRequests();
+        } else {
+          messageEl.className = 'message err';
+          messageEl.textContent = (isEditing ? '更新できませんでした：' : '送信できませんでした：') + data.message;
+        }
+      })
+      .catch((e) => {
+        messageEl.className = 'message err';
+        messageEl.textContent = '通信エラー：' + e;
+      })
+      .finally(() => { btn.disabled = false; btn.textContent = zangyouEditingAppId ? '更新する' : '送信'; });
   });
 </script>
 </body>
