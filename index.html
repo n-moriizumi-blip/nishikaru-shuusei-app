@@ -6,36 +6,41 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<meta name="theme-color" content="#2E75B6">
+<meta name="theme-color" content="#1F3A52">
 <title>勤怠申請（西軽精機）</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   * { box-sizing: border-box; }
   body {
     font-family: "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
-    background: #f2f4f7;
+    background: #E9ECEF;
     margin: 0;
     padding: 24px 16px 60px;
-    color: #1b2430;
+    color: #1D2226;
   }
   .card {
     max-width: 480px;
     margin: 0 auto;
     background: #ffffff;
-    border-radius: 10px;
+    border-radius: 14px;
+    overflow: hidden;
     box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
-    padding: 28px 24px;
   }
-  h1 {
-    font-size: 20px;
-    margin: 0 0 4px;
-    color: #1F4E79;
-  }
-  .sub {
+  .card + .card { margin-top: 16px; }
+  /* ── カード上部の濃紺ヘッダー帯。.cardのoverflow:hiddenで自動的に上だけ丸く見える ── */
+  .card-header { background: #1F3A52; padding: 18px 24px 16px; }
+  .card-header .brand { font-size: 12px; font-weight: 700; color: #F2A900; letter-spacing: .03em; margin: 0 0 3px; }
+  .card-header .back-link {
+    display: inline-block;
     font-size: 13px;
-    color: #666;
-    margin: 0 0 24px;
+    color: rgba(255,255,255,.75);
+    cursor: pointer;
+    margin: 0 0 6px;
   }
+  .card-header h1 { font-size: 20px; margin: 0 0 4px; color: #fff; }
+  .card-header .sub { font-size: 13px; color: rgba(255,255,255,.78); margin: 0; }
+  #signedInAs { font-size: 11.5px; color: rgba(255,255,255,.7); margin-top: 8px; }
+  .card-body { padding: 20px 24px 24px; }
   label {
     display: block;
     font-size: 14px;
@@ -46,14 +51,14 @@
     width: 100%;
     padding: 10px 12px;
     font-size: 15px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    border: 1px solid #C7CDD3;
+    border-radius: 10px;
     background: #fff;
   }
   textarea { resize: vertical; min-height: 70px; }
   .hint {
     font-size: 12.5px;
-    color: #2E75B6;
+    color: #3E6690;
     margin-top: 6px;
     min-height: 1.2em;
   }
@@ -64,66 +69,57 @@
     align-items: center;
     gap: 10px;
     padding: 10px 14px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
+    border: 1px solid #C7CDD3;
+    border-radius: 12px;
     cursor: pointer;
     font-size: 14.5px;
   }
   .radio-group.row .radio-pill { flex: 1; justify-content: center; }
   .radio-pill:has(input:checked) {
-    border-color: #2E75B6;
-    background: #eaf2fa;
+    border-color: #1F3A52;
+    background: #E4EAF0;
     font-weight: 700;
-    color: #1F4E79;
+    color: #1F3A52;
   }
-  .radio-pill input { accent-color: #2E75B6; width: 17px; height: 17px; }
+  .radio-pill input { accent-color: #1F3A52; width: 17px; height: 17px; }
   .primary-btn {
     width: 100%;
     margin-top: 26px;
     padding: 13px;
     font-size: 16px;
     font-weight: 700;
-    color: #fff;
-    background: #2E75B6;
+    color: #1D2226;
+    background: #F2A900;
     border: none;
-    border-radius: 6px;
+    border-radius: 12px;
     cursor: pointer;
   }
-  .primary-btn:disabled { background: #9db8cc; cursor: default; }
+  .primary-btn:disabled { background: #D9DDE1; color: #8A93A0; cursor: default; }
   .secondary-btn {
     width: 100%;
     margin-top: 10px;
     padding: 11px;
     font-size: 14px;
     background: #fff;
-    color: #666;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    color: #5C6670;
+    border: 1px solid #C7CDD3;
+    border-radius: 12px;
     cursor: pointer;
-  }
-  #signedInAs {
-    font-size: 13px;
-    color: #226b4e;
-    background: #e2f2ea;
-    border-radius: 6px;
-    padding: 8px 12px;
-    margin-bottom: 18px;
   }
   .message {
     margin-top: 18px;
     padding: 12px 14px;
-    border-radius: 6px;
+    border-radius: 10px;
     font-size: 14px;
     display: none;
   }
   .message.ok   { display: block; background: #e2f2ea; color: #226b4e; }
   .message.err  { display: block; background: #fbe4e4; color: #92200d; }
   .hidden { display: none !important; }
-  .card + .card { margin-top: 16px; }
-  h2 { font-size: 16px; margin: 0 0 14px; color: #1F4E79; }
+  h2 { font-size: 16px; margin: 0 0 14px; color: #1F3A52; }
   .req-item {
-    border: 1px solid #e2e6ea;
-    border-radius: 8px;
+    border: 1px solid #E2E6EA;
+    border-radius: 12px;
     padding: 12px 14px;
     margin-bottom: 10px;
     font-size: 13.5px;
@@ -139,8 +135,8 @@
   .req-edit-btn {
     font-size: 12.5px;
     padding: 5px 12px;
-    border: 1px solid #2E75B6;
-    color: #2E75B6;
+    border: 1px solid #1F3A52;
+    color: #1F3A52;
     background: #fff;
     border-radius: 999px;
     cursor: pointer;
@@ -148,11 +144,11 @@
   }
   .editing-notice {
     display: none;
-    background: #fff2cc;
-    color: #7f6000;
+    background: #FFF1CC;
+    color: #7A5200;
     font-size: 13px;
     padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: 10px;
     margin-bottom: 4px;
   }
   /* ── 申請の種類を選ぶ画面 ── */
@@ -162,35 +158,28 @@
     text-align: left;
     padding: 16px 18px;
     margin-bottom: 12px;
-    border: 1px solid #dfe3e8;
-    border-radius: 10px;
+    border: 1px solid #DFE3E8;
+    border-radius: 14px;
     background: #fff;
     cursor: pointer;
     font-size: 15.5px;
     font-weight: 700;
-    color: #1F4E79;
+    color: #1F3A52;
   }
-  .type-choice:hover { border-color: #2E75B6; background: #f5f9fd; }
-  .type-choice .desc { display: block; font-size: 12.5px; font-weight: 400; color: #777; margin-top: 3px; }
-  .back-link {
-    display: inline-block;
-    font-size: 13px;
-    color: #2E75B6;
-    cursor: pointer;
-    margin-bottom: 14px;
-  }
+  .type-choice:hover { border-color: #1F3A52; background: #F4F7FA; }
+  .type-choice .desc { display: block; font-size: 12.5px; font-weight: 400; color: #5C6670; margin-top: 3px; }
   .shorei-banner {
-    background: #FFF7E0;
-    color: #7A5B00;
-    border-radius: 6px;
+    background: #FFF1CC;
+    color: #7A5200;
+    border-radius: 10px;
     padding: 9px 12px;
     font-size: 12.5px;
-    margin: -6px 0 16px;
+    margin: 0 0 16px;
   }
   .tool-link {
     display: inline-block;
     font-size: 12.5px;
-    color: #2E75B6;
+    color: #1F3A52;
     margin-top: 6px;
   }
 </style>
@@ -198,49 +187,61 @@
 <body>
 
 <div class="card" id="loginCard">
-  <h1>勤怠申請</h1>
-  <p class="sub">西軽精機の勤怠関連の申請アプリです。</p>
-  <div id="loginArea">
-    <div id="g_id_onload"
-         data-client_id="800178947678-ue8faa8jscidc84656i4ch1d4j0n9lks.apps.googleusercontent.com"
-         data-callback="handleCredentialResponse"
-         data-auto_select="true"
-         data-cancel_on_tap_outside="false">
+  <div class="card-header">
+    <div class="brand">西軽精機</div>
+    <h1>勤怠申請</h1>
+    <p class="sub">西軽精機の勤怠関連の申請アプリです。</p>
+  </div>
+  <div class="card-body">
+    <div id="loginArea">
+      <div id="g_id_onload"
+           data-client_id="800178947678-ue8faa8jscidc84656i4ch1d4j0n9lks.apps.googleusercontent.com"
+           data-callback="handleCredentialResponse"
+           data-auto_select="true"
+           data-cancel_on_tap_outside="false">
+      </div>
+      <div class="g_id_signin" data-type="standard"></div>
     </div>
-    <div class="g_id_signin" data-type="standard"></div>
   </div>
 </div>
 
 <!-- ── 申請の種類を選ぶ画面 ── -->
 <div class="card hidden" id="typeSelectCard">
-  <div id="signedInAs"></div>
-  <h1>勤怠申請</h1>
-  <p class="sub">申請の種類を選んでください。</p>
-  <p class="shorei-banner hidden" id="yukyuShoreiBanner"></p>
-  <button class="type-choice" onclick="showSection('yukyu')">
-    有休・遅刻・早退申請
-    <span class="desc">有給休暇・欠勤・特別休暇・遅刻・早退・中抜けを申請します</span>
-  </button>
-  <button class="type-choice" onclick="showSection('zangyou')">
-    残業申請
-    <span class="desc">残業の予定を事前に申請します</span>
-  </button>
-  <button class="type-choice" onclick="showSection('shuusei')">
-    打刻修正依頼
-    <span class="desc">打刻ミスの修正を依頼します</span>
-  </button>
-  <button class="type-choice" onclick="showSection('chokkouChokki')">
-    直行直帰届
-    <span class="desc">直行・直帰・出張を事前に届け出ます</span>
-  </button>
+  <div class="card-header">
+    <div class="brand">西軽精機</div>
+    <h1>勤怠申請</h1>
+    <p class="sub">申請の種類を選んでください。</p>
+    <div id="signedInAs"></div>
+  </div>
+  <div class="card-body">
+    <p class="shorei-banner hidden" id="yukyuShoreiBanner"></p>
+    <button class="type-choice" onclick="showSection('yukyu')">
+      有休・遅刻・早退申請
+      <span class="desc">有給休暇・欠勤・特別休暇・遅刻・早退・中抜けを申請します</span>
+    </button>
+    <button class="type-choice" onclick="showSection('zangyou')">
+      残業申請
+      <span class="desc">残業の予定を事前に申請します</span>
+    </button>
+    <button class="type-choice" onclick="showSection('shuusei')">
+      打刻修正依頼
+      <span class="desc">打刻ミスの修正を依頼します</span>
+    </button>
+    <button class="type-choice" onclick="showSection('chokkouChokki')">
+      直行直帰届
+      <span class="desc">直行・直帰・出張を事前に届け出ます</span>
+    </button>
+  </div>
 </div>
 
 <!-- ── 打刻修正依頼 ── -->
 <div class="card hidden" id="shuuseiCard">
-  <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
-  <h1>打刻修正依頼</h1>
-  <p class="sub">打刻ミスの修正を依頼するフォームです。送信後、総務が確認して打刻ログへ反映します。</p>
-
+  <div class="card-header">
+    <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
+    <h1>打刻修正依頼</h1>
+    <p class="sub">打刻ミスの修正を依頼するフォームです。送信後、総務が確認して打刻ログへ反映します。</p>
+  </div>
+  <div class="card-body">
   <p class="editing-notice" id="shuuseiEditingNotice"></p>
 
   <label for="shuuseiDate">修正対象日</label>
@@ -278,19 +279,24 @@
   <button class="primary-btn" id="shuuseiSubmitBtn">送信</button>
   <button class="secondary-btn hidden" id="shuuseiCancelEditBtn">編集をやめて新規作成に戻る</button>
   <div class="message" id="shuuseiMessage"></div>
+  </div>
 </div>
 
 <div class="card hidden" id="shuuseiRequestsCard">
-  <h2>自分の打刻修正依頼の一覧</h2>
-  <div id="shuuseiRequestsList"></div>
+  <div class="card-body">
+    <h2>自分の打刻修正依頼の一覧</h2>
+    <div id="shuuseiRequestsList"></div>
+  </div>
 </div>
 
 <!-- ── 残業申請 ── -->
 <div class="card hidden" id="zangyouCard">
-  <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
-  <h1>残業申請</h1>
-  <p class="sub">残業を事前に申請するフォームです。予定が変わった場合は下の一覧から編集できます。</p>
-
+  <div class="card-header">
+    <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
+    <h1>残業申請</h1>
+    <p class="sub">残業を事前に申請するフォームです。予定が変わった場合は下の一覧から編集できます。</p>
+  </div>
+  <div class="card-body">
   <p class="editing-notice" id="zangyouEditingNotice"></p>
 
   <label for="zangyouDate">残業予定日</label>
@@ -322,19 +328,24 @@
   <button class="primary-btn" id="zangyouSubmitBtn">送信</button>
   <button class="secondary-btn hidden" id="zangyouCancelEditBtn">編集をやめて新規作成に戻る</button>
   <div class="message" id="zangyouMessage"></div>
+  </div>
 </div>
 
 <div class="card hidden" id="zangyouRequestsCard">
-  <h2>自分の残業申請の一覧</h2>
-  <div id="zangyouRequestsList"></div>
+  <div class="card-body">
+    <h2>自分の残業申請の一覧</h2>
+    <div id="zangyouRequestsList"></div>
+  </div>
 </div>
 
 <!-- ── 直行直帰届 ── -->
 <div class="card hidden" id="chokkouChokkiCard">
-  <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
-  <h1>直行直帰届</h1>
-  <p class="sub">直行・直帰・出張を事前に届け出るフォームです。送信すると同時に打刻の記録として扱われるため、翌朝の「打刻漏れ」通知は出ません。</p>
-
+  <div class="card-header">
+    <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
+    <h1>直行直帰届</h1>
+    <p class="sub">直行・直帰・出張を事前に届け出るフォームです。送信すると同時に打刻の記録として扱われるため、翌朝の「打刻漏れ」通知は出ません。</p>
+  </div>
+  <div class="card-body">
   <p class="editing-notice" id="chokkouChokkiEditingNotice"></p>
 
   <label>種別</label>
@@ -369,19 +380,24 @@
   <button class="primary-btn" id="chokkouSubmitBtn">送信</button>
   <button class="secondary-btn hidden" id="chokkouCancelEditBtn">編集をやめて新規作成に戻る</button>
   <div class="message" id="chokkouMessage"></div>
+  </div>
 </div>
 
 <div class="card hidden" id="chokkouChokkiRequestsCard">
-  <h2>自分の直行直帰届の一覧</h2>
-  <div id="chokkouChokkiRequestsList"></div>
+  <div class="card-body">
+    <h2>自分の直行直帰届の一覧</h2>
+    <div id="chokkouChokkiRequestsList"></div>
+  </div>
 </div>
 
 <!-- ── 有休・遅刻・早退申請 ── -->
 <div class="card hidden" id="yukyuCard">
-  <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
-  <h1>有休・遅刻・早退申請</h1>
-  <p class="sub">有給休暇・欠勤控除・特別休暇・遅刻・早退・中抜けの申請フォームです。</p>
-
+  <div class="card-header">
+    <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
+    <h1>有休・遅刻・早退申請</h1>
+    <p class="sub">有給休暇・欠勤控除・特別休暇・遅刻・早退・中抜けの申請フォームです。</p>
+  </div>
+  <div class="card-body">
   <p class="editing-notice" id="yukyuEditingNotice"></p>
 
   <label>事前・事後</label>
@@ -522,11 +538,14 @@
   <button class="primary-btn" id="yukyuSubmitBtn">送信</button>
   <button class="secondary-btn hidden" id="yukyuCancelEditBtn">編集をやめて新規作成に戻る</button>
   <div class="message" id="yukyuMessage"></div>
+  </div>
 </div>
 
 <div class="card hidden" id="yukyuRequestsCard">
-  <h2>自分の有休・遅刻・早退申請の一覧</h2>
-  <div id="yukyuRequestsList"></div>
+  <div class="card-body">
+    <h2>自分の有休・遅刻・早退申請の一覧</h2>
+    <div id="yukyuRequestsList"></div>
+  </div>
 </div>
 
 <script>
