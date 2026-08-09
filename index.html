@@ -209,6 +209,10 @@
     残業申請
     <span class="desc">残業の予定を事前に申請します</span>
   </button>
+  <button class="type-choice" onclick="showSection('chokkouChokki')">
+    直行直帰届
+    <span class="desc">直行・直帰・出張を事前に届け出ます</span>
+  </button>
 </div>
 
 <!-- ── 打刻修正依頼 ── -->
@@ -305,6 +309,53 @@
   <div id="zangyouRequestsList"></div>
 </div>
 
+<!-- ── 直行直帰届 ── -->
+<div class="card hidden" id="chokkouChokkiCard">
+  <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
+  <h1>直行直帰届</h1>
+  <p class="sub">直行・直帰・出張を事前に届け出るフォームです。送信すると同時に打刻の記録として扱われるため、翌朝の「打刻漏れ」通知は出ません。</p>
+
+  <p class="editing-notice" id="chokkouChokkiEditingNotice"></p>
+
+  <label>種別</label>
+  <div class="radio-group" id="chokkouShinseiGroup">
+    <label class="radio-pill"><input type="radio" name="chokkouShinsei" value="直行のみ"> 直行のみ</label>
+    <label class="radio-pill"><input type="radio" name="chokkouShinsei" value="直帰のみ"> 直帰のみ</label>
+    <label class="radio-pill"><input type="radio" name="chokkouShinsei" value="直行・直帰"> 直行・直帰</label>
+  </div>
+
+  <label for="chokkouStartDate">開始日</label>
+  <input type="date" id="chokkouStartDate">
+
+  <label for="chokkouEndDate">終了日</label>
+  <input type="date" id="chokkouEndDate">
+  <p class="hint" style="margin-top:-2px;">※単日の場合は開始日と同じ日付にしてください（出張等、複数日にまたがる場合のみ違う日付にしてください）</p>
+
+  <div id="chokkouShukkinArea" class="hidden">
+    <label for="chokkouShukkinTime">出勤予定時刻</label>
+    <input type="time" id="chokkouShukkinTime">
+    <p class="hint" style="margin-top:-2px;">※空欄の場合は定時通りとみなします。</p>
+  </div>
+
+  <div id="chokkouTaikinArea" class="hidden">
+    <label for="chokkouTaikinTime">退勤予定時刻</label>
+    <input type="time" id="chokkouTaikinTime">
+    <p class="hint" style="margin-top:-2px;">※空欄の場合は定時通りとみなします。</p>
+  </div>
+
+  <label for="chokkouRiyu">現場名・理由</label>
+  <textarea id="chokkouRiyu" placeholder="例：〇〇社△△現場、機械据付のため"></textarea>
+
+  <button class="primary-btn" id="chokkouSubmitBtn">送信</button>
+  <button class="secondary-btn hidden" id="chokkouCancelEditBtn">編集をやめて新規作成に戻る</button>
+  <div class="message" id="chokkouMessage"></div>
+</div>
+
+<div class="card hidden" id="chokkouChokkiRequestsCard">
+  <h2>自分の直行直帰届の一覧</h2>
+  <div id="chokkouChokkiRequestsList"></div>
+</div>
+
 <script>
   // ── PWAインストール対応 ──
   if ('serviceWorker' in navigator) {
@@ -358,7 +409,8 @@
 
   // ── セクション切り替え ──
   function showSection(name) {
-    ['typeSelectCard', 'shuuseiCard', 'shuuseiRequestsCard', 'zangyouCard', 'zangyouRequestsCard'].forEach((id) => {
+    ['typeSelectCard', 'shuuseiCard', 'shuuseiRequestsCard', 'zangyouCard', 'zangyouRequestsCard',
+     'chokkouChokkiCard', 'chokkouChokkiRequestsCard'].forEach((id) => {
       document.getElementById(id).classList.add('hidden');
     });
     if (name === 'select') {
@@ -371,6 +423,10 @@
       document.getElementById('zangyouCard').classList.remove('hidden');
       document.getElementById('zangyouRequestsCard').classList.remove('hidden');
       loadZangyouRequests();
+    } else if (name === 'chokkouChokki') {
+      document.getElementById('chokkouChokkiCard').classList.remove('hidden');
+      document.getElementById('chokkouChokkiRequestsCard').classList.remove('hidden');
+      loadChokkouChokkiRequests();
     }
     window.scrollTo({ top: 0 });
   }
@@ -645,6 +701,129 @@
         messageEl.textContent = '通信エラー：' + e;
       })
       .finally(() => { btn.disabled = false; btn.textContent = zangyouEditingAppId ? '更新する' : '送信'; });
+  });
+
+  // ============================================================
+  // 直行直帰届
+  // ============================================================
+  let chokkouChokkiEditingAppId = null;
+
+  const chokkouShukkinArea = document.getElementById('chokkouShukkinArea');
+  const chokkouTaikinArea  = document.getElementById('chokkouTaikinArea');
+
+  function updateChokkouFieldVisibility() {
+    const shinsei = getRadioValue('chokkouShinsei');
+    chokkouShukkinArea.classList.toggle('hidden', shinsei !== '直行のみ' && shinsei !== '直行・直帰');
+    chokkouTaikinArea.classList.toggle('hidden', shinsei !== '直帰のみ' && shinsei !== '直行・直帰');
+  }
+  document.querySelectorAll('input[name="chokkouShinsei"]').forEach((r) => {
+    r.addEventListener('change', updateChokkouFieldVisibility);
+  });
+
+  function loadChokkouChokkiRequests() {
+    const listEl = document.getElementById('chokkouChokkiRequestsList');
+    listEl.textContent = '読み込み中...';
+    fetch(GAS_URL + '?mode=myChokkouChokkiRequests&token=' + encodeURIComponent(idToken))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) { listEl.textContent = '取得できませんでした：' + data.error; return; }
+        if (data.list.length === 0) { listEl.textContent = 'まだ申請はありません。'; return; }
+        listEl.innerHTML = '';
+        data.list.forEach((req) => {
+          const isWait = req.status === '承認待';
+          const period = req.startDate + (req.endDate !== req.startDate ? '〜' + req.endDate : '');
+          const times = (req.shukkinTime ? '出勤：' + req.shukkinTime + '　' : '') + (req.taikinTime ? '退勤：' + req.taikinTime : '');
+          const div = document.createElement('div');
+          div.className = 'req-item';
+          div.innerHTML =
+            '<div class="row"><strong>' + period + '　' + req.shinsei + '</strong>' +
+            '<span class="req-status" style="' + statusBadgeStyle(req.status) + '">' + req.status + '</span></div>' +
+            '<div>' + (times ? times + '　' : '') + '現場名・理由：' + req.riyu + '</div>';
+          if (isWait) {
+            const btn = document.createElement('button');
+            btn.className = 'req-edit-btn';
+            btn.textContent = '編集する';
+            btn.addEventListener('click', () => startEditingChokkouChokki(req));
+            div.appendChild(btn);
+          }
+          listEl.appendChild(div);
+        });
+      })
+      .catch(() => { listEl.textContent = '取得中にエラーが発生しました。'; });
+  }
+
+  function startEditingChokkouChokki(req) {
+    chokkouChokkiEditingAppId = req.appId;
+    setRadioValue('chokkouShinsei', req.shinsei);
+    document.getElementById('chokkouStartDate').value = req.startDate.replace(/\//g, '-');
+    document.getElementById('chokkouEndDate').value = req.endDate.replace(/\//g, '-');
+    document.getElementById('chokkouShukkinTime').value = req.shukkinTime || '';
+    document.getElementById('chokkouTaikinTime').value = req.taikinTime || '';
+    document.getElementById('chokkouRiyu').value = req.riyu;
+    updateChokkouFieldVisibility();
+    document.getElementById('chokkouChokkiEditingNotice').style.display = 'block';
+    document.getElementById('chokkouChokkiEditingNotice').textContent = '申請ID「' + req.appId + '」を編集中です。';
+    document.getElementById('chokkouCancelEditBtn').classList.remove('hidden');
+    document.getElementById('chokkouSubmitBtn').textContent = '更新する';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function stopEditingChokkouChokki() {
+    chokkouChokkiEditingAppId = null;
+    setRadioValue('chokkouShinsei', '');
+    document.getElementById('chokkouStartDate').value = '';
+    document.getElementById('chokkouEndDate').value = '';
+    document.getElementById('chokkouShukkinTime').value = '';
+    document.getElementById('chokkouTaikinTime').value = '';
+    document.getElementById('chokkouRiyu').value = '';
+    updateChokkouFieldVisibility();
+    document.getElementById('chokkouChokkiEditingNotice').style.display = 'none';
+    document.getElementById('chokkouCancelEditBtn').classList.add('hidden');
+    document.getElementById('chokkouSubmitBtn').textContent = '送信';
+  }
+
+  document.getElementById('chokkouCancelEditBtn').addEventListener('click', stopEditingChokkouChokki);
+
+  document.getElementById('chokkouSubmitBtn').addEventListener('click', () => {
+    const shinsei    = getRadioValue('chokkouShinsei');
+    const startDate  = document.getElementById('chokkouStartDate').value ? document.getElementById('chokkouStartDate').value.replace(/-/g, '/') : '';
+    const endDate    = document.getElementById('chokkouEndDate').value ? document.getElementById('chokkouEndDate').value.replace(/-/g, '/') : '';
+    const shukkinTime= document.getElementById('chokkouShukkinTime').value;
+    const taikinTime = document.getElementById('chokkouTaikinTime').value;
+    const riyu       = document.getElementById('chokkouRiyu').value.trim();
+    const messageEl  = document.getElementById('chokkouMessage');
+    messageEl.className = 'message'; messageEl.textContent = '';
+
+    if (!shinsei || !startDate || !endDate || !riyu) {
+      messageEl.className = 'message err'; messageEl.textContent = '未入力の項目があります。'; return;
+    }
+
+    const btn = document.getElementById('chokkouSubmitBtn');
+    const isEditing = !!chokkouChokkiEditingAppId;
+    btn.disabled = true; btn.textContent = isEditing ? '更新中...' : '送信中...';
+
+    const payload = isEditing
+      ? { action: 'updateChokkouChokki', token: idToken, appId: chokkouChokkiEditingAppId, shinsei, startDate, endDate, shukkinTime, taikinTime, riyu }
+      : { action: 'submitChokkouChokki', token: idToken, shinsei, startDate, endDate, shukkinTime, taikinTime, riyu };
+
+    fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          messageEl.className = 'message ok';
+          messageEl.textContent = (isEditing ? '更新しました' : '送信しました') + '（申請ID：' + data.appId + '）。総務の確認をお待ちください。';
+          stopEditingChokkouChokki();
+          loadChokkouChokkiRequests();
+        } else {
+          messageEl.className = 'message err';
+          messageEl.textContent = (isEditing ? '更新できませんでした：' : '送信できませんでした：') + data.message;
+        }
+      })
+      .catch((e) => {
+        messageEl.className = 'message err';
+        messageEl.textContent = '通信エラー：' + e;
+      })
+      .finally(() => { btn.disabled = false; btn.textContent = chokkouChokkiEditingAppId ? '更新する' : '送信'; });
   });
 </script>
 </body>
