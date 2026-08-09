@@ -28,7 +28,7 @@
   }
   .card + .card { margin-top: 16px; }
   /* ── カード上部の濃紺ヘッダー帯。.cardのoverflow:hiddenで自動的に上だけ丸く見える ── */
-  .card-header { background: #1F3A52; padding: 18px 24px 16px; }
+  .card-header { background: #1F3A52; padding: 18px 24px 16px; text-align: center; }
   .card-header .brand { font-size: 12px; font-weight: 700; color: #F2A900; letter-spacing: .03em; margin: 0 0 3px; }
   .card-header .back-link {
     display: inline-block;
@@ -46,6 +46,22 @@
     font-size: 14px;
     font-weight: 600;
     margin: 18px 0 6px;
+  }
+  /* 項目見出し（ラジオピル個別の選択肢ラベルは除く）を目立たせる：
+     濃紺の太字＋大きめサイズ＋山吹色の六角マーカー */
+  label:not(.radio-pill) {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #1F3A52;
+    margin: 22px 0 8px;
+  }
+  label:not(.radio-pill)::before {
+    content: "⬡";
+    color: #F2A900;
+    font-size: 13px;
   }
   input[type="date"], input[type="time"], textarea {
     width: 100%;
