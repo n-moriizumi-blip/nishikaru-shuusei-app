@@ -213,6 +213,10 @@
     直行直帰届
     <span class="desc">直行・直帰・出張を事前に届け出ます</span>
   </button>
+  <button class="type-choice" onclick="showSection('yukyu')">
+    有休・遅刻・早退申請
+    <span class="desc">有給休暇・欠勤・特別休暇・遅刻・早退・中抜けを申請します</span>
+  </button>
 </div>
 
 <!-- ── 打刻修正依頼 ── -->
@@ -356,6 +360,155 @@
   <div id="chokkouChokkiRequestsList"></div>
 </div>
 
+<!-- ── 有休・遅刻・早退申請 ── -->
+<div class="card hidden" id="yukyuCard">
+  <span class="back-link" onclick="showSection('select')">← 種類を選び直す</span>
+  <h1>有休・遅刻・早退申請</h1>
+  <p class="sub">有給休暇・欠勤控除・特別休暇・遅刻・早退・中抜けの申請フォームです。</p>
+
+  <p class="editing-notice" id="yukyuEditingNotice"></p>
+
+  <label>事前・事後</label>
+  <p class="hint" style="margin-top:-2px;">※申請内容に「まだ起きていない予定」が1つでも含まれる場合は「事前」を選んでください（例：遅刻はもう発生したが、この後早退する予定がある場合も「事前」）。申請内容がすべて終わっている場合のみ「事後」を選んでください。</p>
+  <div class="radio-group row" id="yukyuJizenGoGroup">
+    <label class="radio-pill"><input type="radio" name="yukyuJizenGo" value="事前"> 事前</label>
+    <label class="radio-pill"><input type="radio" name="yukyuJizenGo" value="事後"> 事後</label>
+  </div>
+
+  <label>有給種別／控除区分</label>
+  <div class="radio-group" id="yukyuKbnGroup">
+    <label class="radio-pill"><input type="radio" name="yukyuKbn" value="通常有給"> 通常有給</label>
+    <label class="radio-pill"><input type="radio" name="yukyuKbn" value="積立有給（傷病・介護のみ）"> 積立有給（傷病・介護のみ）</label>
+    <label class="radio-pill"><input type="radio" name="yukyuKbn" value="欠勤控除"> 欠勤控除</label>
+    <label class="radio-pill"><input type="radio" name="yukyuKbn" value="欠勤控除（労災）"> 欠勤控除（労災）</label>
+    <label class="radio-pill"><input type="radio" name="yukyuKbn" value="特別休暇（弔事）"> 特別休暇（弔事）</label>
+    <label class="radio-pill"><input type="radio" name="yukyuKbn" value="特別休暇（慶事）"> 特別休暇（慶事）</label>
+    <label class="radio-pill"><input type="radio" name="yukyuKbn" value="傷病等特別休暇"> 傷病等特別休暇</label>
+  </div>
+
+  <div id="yukyuShinseiArea" class="hidden">
+    <label>申請種別</label>
+    <div class="radio-group" id="yukyuShinseiGroup">
+      <label class="radio-pill"><input type="radio" name="yukyuShinsei" value="1日"> 1日</label>
+      <label class="radio-pill yukyu-halfday-pill"><input type="radio" name="yukyuShinsei" value="午前休（0.5日）"> 午前休（0.5日）</label>
+      <label class="radio-pill yukyu-halfday-pill"><input type="radio" name="yukyuShinsei" value="午後休（0.5日）"> 午後休（0.5日）</label>
+      <label class="radio-pill"><input type="radio" name="yukyuShinsei" value="遅刻"> 遅刻</label>
+      <label class="radio-pill"><input type="radio" name="yukyuShinsei" value="早退"> 早退</label>
+      <label class="radio-pill"><input type="radio" name="yukyuShinsei" value="中抜け"> 中抜け</label>
+      <label class="radio-pill"><input type="radio" name="yukyuShinsei" value="遅刻・中抜け＋早退"> 遅刻・中抜け＋早退</label>
+    </div>
+  </div>
+
+  <div id="yukyuFullDayArea" class="hidden">
+    <label for="yukyuStartDate">開始日</label>
+    <input type="date" id="yukyuStartDate">
+    <label for="yukyuEndDate">終了日</label>
+    <input type="date" id="yukyuEndDate">
+    <p class="hint" style="margin-top:-2px;">※単日の場合は開始日と同じ日付にしてください</p>
+  </div>
+
+  <div id="yukyuSingleDateArea" class="hidden">
+    <label for="yukyuSingleDate" id="yukyuSingleDateLabel">対象日</label>
+    <input type="date" id="yukyuSingleDate">
+  </div>
+
+  <div id="yukyuChikokuTimeArea" class="hidden">
+    <label for="yukyuShukkinYotei">出勤予定時刻</label>
+    <input type="time" id="yukyuShukkinYotei">
+  </div>
+
+  <div id="yukyuSoutaiTimeArea" class="hidden">
+    <label for="yukyuTaikinYotei">退勤予定時刻</label>
+    <input type="time" id="yukyuTaikinYotei">
+  </div>
+
+  <div id="yukyuNakanukeTimeArea" class="hidden">
+    <label for="yukyuGaishutsuYotei">外出予定時刻</label>
+    <input type="time" id="yukyuGaishutsuYotei">
+    <label for="yukyuKishaYotei">帰社予定時刻</label>
+    <input type="time" id="yukyuKishaYotei">
+  </div>
+
+  <div id="yukyuFukusuTimeArea" class="hidden">
+    <p class="hint">1日の中で遅刻と早退を両方行う場合など、時間帯が2つにまたがる場合はこちらです。遅刻はすでに発生していて早退はこれから、という場合も、1つ目の終了時刻に実際に出勤した時刻をそのまま入力してください。</p>
+    <label for="yukyuW1s">1つ目の開始時刻</label>
+    <input type="time" id="yukyuW1s">
+    <label for="yukyuW1e">1つ目の終了時刻</label>
+    <input type="time" id="yukyuW1e">
+    <label for="yukyuW2s">2つ目の開始時刻</label>
+    <input type="time" id="yukyuW2s">
+    <label for="yukyuW2e">2つ目の終了時刻</label>
+    <input type="time" id="yukyuW2e">
+  </div>
+
+  <div id="yukyuKisanArea" class="hidden">
+    <label for="yukyuKisan">起算日</label>
+    <input type="date" id="yukyuKisan">
+    <p class="hint" style="margin-top:-2px;" id="yukyuKisanHint"></p>
+  </div>
+
+  <div id="yukyuZokugaraChoujiArea" class="hidden">
+    <label>続柄</label>
+    <div class="radio-group" id="yukyuZokugaraChoujiGroup">
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="配偶者"> 配偶者</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="子"> 子</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="父母"> 父母</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="配偶者の父母"> 配偶者の父母</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="兄弟姉妹"> 兄弟姉妹</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="配偶者の兄弟姉妹"> 配偶者の兄弟姉妹</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="祖父母"> 祖父母</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="配偶者の祖父母"> 配偶者の祖父母</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="孫"> 孫</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="叔父叔母"> 叔父叔母</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="配偶者の叔父叔母"> 配偶者の叔父叔母</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="甥姪"> 甥姪</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraChouji" value="配偶者の甥姪"> 配偶者の甥姪</label>
+    </div>
+  </div>
+
+  <div id="yukyuZokugaraKeijiArea" class="hidden">
+    <label>続柄</label>
+    <div class="radio-group" id="yukyuZokugaraKeijiGroup">
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraKeiji" value="本人が結婚"> 本人が結婚</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraKeiji" value="兄弟（配偶者の兄弟も）"> 兄弟（配偶者の兄弟も）</label>
+      <label class="radio-pill"><input type="radio" name="yukyuZokugaraKeiji" value="子"> 子</label>
+    </div>
+  </div>
+
+  <div id="yukyuZokugaraDetailArea" class="hidden">
+    <label for="yukyuZokugaraDetail">続柄の詳しい内容</label>
+    <textarea id="yukyuZokugaraDetail" placeholder="続柄が「叔父叔母」等、どちらか分からない選択肢の場合に具体的にご記入ください（例：配偶者の叔父）"></textarea>
+  </div>
+
+  <div id="yukyuMoshuArea" class="hidden">
+    <label>喪主を務めますか？</label>
+    <p class="hint" style="margin-top:-2px;">※喪主を兼務する場合は「はい」を選んでください（付与日数は喪主の日数が優先されます）。</p>
+    <div class="radio-group row" id="yukyuMoshuGroup">
+      <label class="radio-pill"><input type="radio" name="yukyuMoshu" value="はい"> はい</label>
+      <label class="radio-pill"><input type="radio" name="yukyuMoshu" value="いいえ"> いいえ</label>
+    </div>
+  </div>
+
+  <div id="yukyuShoubyouArea" class="hidden">
+    <label for="yukyuShoubyoumei">傷病名など</label>
+    <textarea id="yukyuShoubyoumei"></textarea>
+  </div>
+
+  <div id="yukyuRiyuArea">
+    <label for="yukyuRiyu">理由・備考</label>
+    <textarea id="yukyuRiyu"></textarea>
+  </div>
+
+  <button class="primary-btn" id="yukyuSubmitBtn">送信</button>
+  <button class="secondary-btn hidden" id="yukyuCancelEditBtn">編集をやめて新規作成に戻る</button>
+  <div class="message" id="yukyuMessage"></div>
+</div>
+
+<div class="card hidden" id="yukyuRequestsCard">
+  <h2>自分の有休・遅刻・早退申請の一覧</h2>
+  <div id="yukyuRequestsList"></div>
+</div>
+
 <script>
   // ── PWAインストール対応 ──
   if ('serviceWorker' in navigator) {
@@ -410,7 +563,7 @@
   // ── セクション切り替え ──
   function showSection(name) {
     ['typeSelectCard', 'shuuseiCard', 'shuuseiRequestsCard', 'zangyouCard', 'zangyouRequestsCard',
-     'chokkouChokkiCard', 'chokkouChokkiRequestsCard'].forEach((id) => {
+     'chokkouChokkiCard', 'chokkouChokkiRequestsCard', 'yukyuCard', 'yukyuRequestsCard'].forEach((id) => {
       document.getElementById(id).classList.add('hidden');
     });
     if (name === 'select') {
@@ -427,6 +580,10 @@
       document.getElementById('chokkouChokkiCard').classList.remove('hidden');
       document.getElementById('chokkouChokkiRequestsCard').classList.remove('hidden');
       loadChokkouChokkiRequests();
+    } else if (name === 'yukyu') {
+      document.getElementById('yukyuCard').classList.remove('hidden');
+      document.getElementById('yukyuRequestsCard').classList.remove('hidden');
+      loadYukyuRequests();
     }
     window.scrollTo({ top: 0 });
   }
@@ -824,6 +981,271 @@
         messageEl.textContent = '通信エラー：' + e;
       })
       .finally(() => { btn.disabled = false; btn.textContent = chokkouChokkiEditingAppId ? '更新する' : '送信'; });
+  });
+
+  // ============================================================
+  // 有休・遅刻・早退申請
+  // ============================================================
+  let yukyuEditingAppId = null;
+  const YUKYU_GROUP_KBN = ['通常有給', '欠勤控除', '欠勤控除（労災）'];
+  const YUKYU_TIME_TYPES = ['遅刻', '早退', '中抜け', '遅刻・中抜け＋早退'];
+
+  function yukyuBranch() {
+    const kbn     = getRadioValue('yukyuKbn');
+    const shinsei = getRadioValue('yukyuShinsei');
+    const isYukyuGroup = YUKYU_GROUP_KBN.includes(kbn);
+    const isTsumitate  = kbn === '積立有給（傷病・介護のみ）';
+    const isChouji     = kbn === '特別休暇（弔事）';
+    const isKeiji      = kbn === '特別休暇（慶事）';
+    const isShoubyou   = kbn === '傷病等特別休暇';
+    const isTokubetsu  = isChouji || isKeiji || isShoubyou;
+    return {
+      kbn, shinsei, isYukyuGroup, isTsumitate, isChouji, isKeiji, isShoubyou, isTokubetsu,
+      isFullDay   : isTsumitate || isTokubetsu || (isYukyuGroup && shinsei === '1日'),
+      isSingleDate: isYukyuGroup && ['午前休（0.5日）', '午後休（0.5日）'].includes(shinsei),
+      isTimeType  : isYukyuGroup && YUKYU_TIME_TYPES.includes(shinsei),
+    };
+  }
+
+  function updateYukyuFieldVisibility() {
+    const jizenGo = getRadioValue('yukyuJizenGo');
+    const b = yukyuBranch();
+
+    document.getElementById('yukyuShinseiArea').classList.toggle('hidden', !b.isYukyuGroup);
+    document.querySelectorAll('.yukyu-halfday-pill').forEach((el) => {
+      el.classList.toggle('hidden', b.kbn !== '通常有給');
+    });
+
+    document.getElementById('yukyuFullDayArea').classList.toggle('hidden', !b.isFullDay);
+    document.getElementById('yukyuSingleDateArea').classList.toggle('hidden', !b.isSingleDate && !b.isTimeType);
+    document.getElementById('yukyuSingleDateLabel').textContent = b.isSingleDate ? '使用日' : '対象日';
+
+    document.getElementById('yukyuChikokuTimeArea').classList.toggle('hidden', !(b.shinsei === '遅刻' && b.isTimeType && jizenGo === '事前'));
+    document.getElementById('yukyuSoutaiTimeArea').classList.toggle('hidden', !(b.shinsei === '早退' && b.isTimeType && jizenGo === '事前'));
+    document.getElementById('yukyuNakanukeTimeArea').classList.toggle('hidden', !(b.shinsei === '中抜け' && b.isTimeType && jizenGo === '事前'));
+    document.getElementById('yukyuFukusuTimeArea').classList.toggle('hidden', !(b.shinsei === '遅刻・中抜け＋早退' && b.isTimeType && jizenGo === '事前'));
+
+    document.getElementById('yukyuKisanArea').classList.toggle('hidden', !b.isTokubetsu);
+    document.getElementById('yukyuKisanHint').textContent =
+      b.isChouji ? '※お亡くなりになった日など、休暇の起算日を入力してください。' :
+      b.isKeiji  ? '※結婚式の日など、休暇の起算日を入力してください。' :
+      b.isShoubyou ? '※医師の診察を受けた日など、休暇の起算日を入力してください。' : '';
+    document.getElementById('yukyuZokugaraChoujiArea').classList.toggle('hidden', !b.isChouji);
+    document.getElementById('yukyuZokugaraKeijiArea').classList.toggle('hidden', !b.isKeiji);
+    document.getElementById('yukyuZokugaraDetailArea').classList.toggle('hidden', !(b.isChouji || b.isKeiji));
+    document.getElementById('yukyuMoshuArea').classList.toggle('hidden', !b.isChouji);
+    document.getElementById('yukyuShoubyouArea').classList.toggle('hidden', !b.isShoubyou);
+
+    document.getElementById('yukyuRiyuArea').classList.toggle('hidden', b.isTokubetsu);
+  }
+
+  document.querySelectorAll('input[name="yukyuJizenGo"], input[name="yukyuKbn"], input[name="yukyuShinsei"]').forEach((r) => {
+    r.addEventListener('change', updateYukyuFieldVisibility);
+  });
+
+  function loadYukyuRequests() {
+    const listEl = document.getElementById('yukyuRequestsList');
+    listEl.textContent = '読み込み中...';
+    fetch(GAS_URL + '?mode=myYukyuRequests&token=' + encodeURIComponent(idToken))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) { listEl.textContent = '取得できませんでした：' + data.error; return; }
+        if (data.list.length === 0) { listEl.textContent = 'まだ申請はありません。'; return; }
+        listEl.innerHTML = '';
+        data.list.forEach((req) => {
+          const isWait = req.status === '承認待';
+          const period = req.startDate + (req.endDate !== req.startDate ? '〜' + req.endDate : '');
+          const detailLine = req.riyu ? '理由：' + req.riyu : (req.detail ? '詳細：' + req.detail : '');
+          const div = document.createElement('div');
+          div.className = 'req-item';
+          div.innerHTML =
+            '<div class="row"><strong>' + period + '　' + req.jizenGo + '・' + req.shinsei + '</strong>' +
+            '<span class="req-status" style="' + statusBadgeStyle(req.status) + '">' + req.status + '</span></div>' +
+            '<div>' + (req.jikan ? '時間：' + req.jikan + '　' : '') + detailLine + '</div>';
+          if (isWait) {
+            const btn = document.createElement('button');
+            btn.className = 'req-edit-btn';
+            btn.textContent = '編集する';
+            btn.addEventListener('click', () => startEditingYukyu(req));
+            div.appendChild(btn);
+          }
+          listEl.appendChild(div);
+        });
+      })
+      .catch(() => { listEl.textContent = '取得中にエラーが発生しました。'; });
+  }
+
+  function startEditingYukyu(req) {
+    yukyuEditingAppId = req.appId;
+    setRadioValue('yukyuJizenGo', req.jizenGo);
+    setRadioValue('yukyuKbn', req.kbn);
+    setRadioValue('yukyuShinsei', req.shinsei);
+    updateYukyuFieldVisibility();
+    const b = yukyuBranch();
+
+    if (b.isFullDay) {
+      document.getElementById('yukyuStartDate').value = req.startDate.replace(/\//g, '-');
+      document.getElementById('yukyuEndDate').value = req.endDate.replace(/\//g, '-');
+    } else if (b.isSingleDate || b.isTimeType) {
+      document.getElementById('yukyuSingleDate').value = req.startDate.replace(/\//g, '-');
+    }
+
+    if (b.isTimeType && req.jizenGo === '事前') {
+      if (req.shinsei === '遅刻') document.getElementById('yukyuShukkinYotei').value = req.w1e || '';
+      if (req.shinsei === '早退') document.getElementById('yukyuTaikinYotei').value = req.w1s || '';
+      if (req.shinsei === '中抜け') {
+        document.getElementById('yukyuGaishutsuYotei').value = req.w1s || '';
+        document.getElementById('yukyuKishaYotei').value = req.w1e || '';
+      }
+      if (req.shinsei === '遅刻・中抜け＋早退') {
+        document.getElementById('yukyuW1s').value = req.w1s || '';
+        document.getElementById('yukyuW1e').value = req.w1e || '';
+        document.getElementById('yukyuW2s').value = req.w2s || '';
+        document.getElementById('yukyuW2e').value = req.w2e || '';
+      }
+    }
+
+    document.getElementById('yukyuKisan').value = req.kisan ? req.kisan.replace(/\//g, '-') : '';
+    if (b.isChouji) {
+      setRadioValue('yukyuZokugaraChouji', req.zokugaraChoice || '');
+      setRadioValue('yukyuMoshu', (req.zokugara || '').includes('【喪主】') ? 'はい' : 'いいえ');
+    }
+    if (b.isKeiji) {
+      setRadioValue('yukyuZokugaraKeiji', req.zokugaraChoice || '');
+    }
+    document.getElementById('yukyuZokugaraDetail').value = (req.zokugara || '').replace('【喪主】', '');
+    document.getElementById('yukyuShoubyoumei').value = req.detail || '';
+    document.getElementById('yukyuRiyu').value = req.riyu || '';
+
+    updateYukyuFieldVisibility();
+    document.getElementById('yukyuEditingNotice').style.display = 'block';
+    document.getElementById('yukyuEditingNotice').textContent = '申請ID「' + req.appId + '」を編集中です。';
+    document.getElementById('yukyuCancelEditBtn').classList.remove('hidden');
+    document.getElementById('yukyuSubmitBtn').textContent = '更新する';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function stopEditingYukyu() {
+    yukyuEditingAppId = null;
+    setRadioValue('yukyuJizenGo', '');
+    setRadioValue('yukyuKbn', '');
+    setRadioValue('yukyuShinsei', '');
+    ['yukyuStartDate','yukyuEndDate','yukyuSingleDate','yukyuShukkinYotei','yukyuTaikinYotei',
+     'yukyuGaishutsuYotei','yukyuKishaYotei','yukyuW1s','yukyuW1e','yukyuW2s','yukyuW2e',
+     'yukyuKisan','yukyuZokugaraDetail','yukyuShoubyoumei','yukyuRiyu'].forEach((id) => {
+      document.getElementById(id).value = '';
+    });
+    setRadioValue('yukyuZokugaraChouji', '');
+    setRadioValue('yukyuZokugaraKeiji', '');
+    setRadioValue('yukyuMoshu', '');
+    updateYukyuFieldVisibility();
+    document.getElementById('yukyuEditingNotice').style.display = 'none';
+    document.getElementById('yukyuCancelEditBtn').classList.add('hidden');
+    document.getElementById('yukyuSubmitBtn').textContent = '送信';
+  }
+
+  document.getElementById('yukyuCancelEditBtn').addEventListener('click', stopEditingYukyu);
+
+  document.getElementById('yukyuSubmitBtn').addEventListener('click', () => {
+    const jizenGo = getRadioValue('yukyuJizenGo');
+    const b = yukyuBranch();
+    const messageEl = document.getElementById('yukyuMessage');
+    messageEl.className = 'message'; messageEl.textContent = '';
+
+    if (!jizenGo || !b.kbn) {
+      messageEl.className = 'message err'; messageEl.textContent = '事前・事後、有給種別／控除区分を選んでください。'; return;
+    }
+    if (b.isYukyuGroup && !b.shinsei) {
+      messageEl.className = 'message err'; messageEl.textContent = '申請種別を選んでください。'; return;
+    }
+
+    let startDate = '', endDate = '';
+    if (b.isFullDay) {
+      startDate = document.getElementById('yukyuStartDate').value;
+      endDate   = document.getElementById('yukyuEndDate').value;
+      if (!startDate || !endDate) {
+        messageEl.className = 'message err'; messageEl.textContent = '開始日・終了日を入力してください。'; return;
+      }
+    } else if (b.isSingleDate || b.isTimeType) {
+      const d = document.getElementById('yukyuSingleDate').value;
+      if (!d) { messageEl.className = 'message err'; messageEl.textContent = '対象日を入力してください。'; return; }
+      startDate = d; endDate = d;
+    }
+    startDate = startDate.replace(/-/g, '/');
+    endDate   = endDate.replace(/-/g, '/');
+
+    const payload = {
+      token: idToken, jizenGo, kbn: b.kbn,
+      shinsei: b.isYukyuGroup ? b.shinsei : '',
+      startDate, endDate,
+      shukkinYotei  : document.getElementById('yukyuShukkinYotei').value,
+      taikinYotei   : document.getElementById('yukyuTaikinYotei').value,
+      gaishutsuYotei: document.getElementById('yukyuGaishutsuYotei').value,
+      kishaYotei    : document.getElementById('yukyuKishaYotei').value,
+      w1s: document.getElementById('yukyuW1s').value,
+      w1e: document.getElementById('yukyuW1e').value,
+      w2s: document.getElementById('yukyuW2s').value,
+      w2e: document.getElementById('yukyuW2e').value,
+      kisan: document.getElementById('yukyuKisan').value ? document.getElementById('yukyuKisan').value.replace(/-/g, '/') : '',
+      zokugara: b.isChouji ? getRadioValue('yukyuZokugaraChouji') : (b.isKeiji ? getRadioValue('yukyuZokugaraKeiji') : ''),
+      zokugaraDetail: document.getElementById('yukyuZokugaraDetail').value.trim(),
+      moshu: b.isChouji ? getRadioValue('yukyuMoshu') : '',
+      shoubyoumei: document.getElementById('yukyuShoubyoumei').value.trim(),
+      riyu: document.getElementById('yukyuRiyu').value.trim(),
+    };
+
+    if (b.isTimeType && jizenGo === '事前') {
+      if (b.shinsei === '遅刻' && !payload.shukkinYotei) {
+        messageEl.className = 'message err'; messageEl.textContent = '出勤予定時刻を入力してください。'; return;
+      }
+      if (b.shinsei === '早退' && !payload.taikinYotei) {
+        messageEl.className = 'message err'; messageEl.textContent = '退勤予定時刻を入力してください。'; return;
+      }
+      if (b.shinsei === '中抜け' && (!payload.gaishutsuYotei || !payload.kishaYotei)) {
+        messageEl.className = 'message err'; messageEl.textContent = '外出・帰社予定時刻を入力してください。'; return;
+      }
+      if (b.shinsei === '遅刻・中抜け＋早退' && (!payload.w1s || !payload.w1e || !payload.w2s || !payload.w2e)) {
+        messageEl.className = 'message err'; messageEl.textContent = '1つ目・2つ目の時刻を入力してください。'; return;
+      }
+    }
+    if (b.isChouji && (!payload.kisan || !payload.zokugara || !payload.zokugaraDetail || !payload.moshu)) {
+      messageEl.className = 'message err'; messageEl.textContent = '起算日・続柄・喪主の有無を入力してください。'; return;
+    }
+    if (b.isKeiji && (!payload.kisan || !payload.zokugara || !payload.zokugaraDetail)) {
+      messageEl.className = 'message err'; messageEl.textContent = '起算日・続柄を入力してください。'; return;
+    }
+    if (b.isShoubyou && (!payload.kisan || !payload.shoubyoumei)) {
+      messageEl.className = 'message err'; messageEl.textContent = '起算日・傷病名などを入力してください。'; return;
+    }
+    if (!b.isTokubetsu && !payload.riyu) {
+      messageEl.className = 'message err'; messageEl.textContent = '理由・備考を入力してください。'; return;
+    }
+
+    const btn = document.getElementById('yukyuSubmitBtn');
+    const isEditing = !!yukyuEditingAppId;
+    btn.disabled = true; btn.textContent = isEditing ? '更新中...' : '送信中...';
+
+    payload.action = isEditing ? 'updateYukyu' : 'submitYukyu';
+    if (isEditing) payload.appId = yukyuEditingAppId;
+
+    fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          messageEl.className = 'message ok';
+          messageEl.textContent = (isEditing ? '更新しました' : '送信しました') + '（申請ID：' + data.appId + '）。総務の確認をお待ちください。';
+          stopEditingYukyu();
+          loadYukyuRequests();
+        } else {
+          messageEl.className = 'message err';
+          messageEl.textContent = (isEditing ? '更新できませんでした：' : '送信できませんでした：') + data.message;
+        }
+      })
+      .catch((e) => {
+        messageEl.className = 'message err';
+        messageEl.textContent = '通信エラー：' + e;
+      })
+      .finally(() => { btn.disabled = false; btn.textContent = yukyuEditingAppId ? '更新する' : '送信'; });
   });
 </script>
 </body>
