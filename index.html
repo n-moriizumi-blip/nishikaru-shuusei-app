@@ -179,6 +179,20 @@
     cursor: pointer;
     margin-bottom: 14px;
   }
+  .shorei-banner {
+    background: #FFF7E0;
+    color: #7A5B00;
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 12.5px;
+    margin: -6px 0 16px;
+  }
+  .tool-link {
+    display: inline-block;
+    font-size: 12.5px;
+    color: #2E75B6;
+    margin-top: 6px;
+  }
 </style>
 </head>
 <body>
@@ -200,22 +214,24 @@
 <!-- ── 申請の種類を選ぶ画面 ── -->
 <div class="card hidden" id="typeSelectCard">
   <div id="signedInAs"></div>
-  <h1>申請の種類を選ぶ</h1>
-  <button class="type-choice" onclick="showSection('shuusei')">
-    打刻修正依頼
-    <span class="desc">打刻ミスの修正を依頼します</span>
+  <h1>勤怠申請</h1>
+  <p class="sub">申請の種類を選んでください。</p>
+  <p class="shorei-banner hidden" id="yukyuShoreiBanner"></p>
+  <button class="type-choice" onclick="showSection('yukyu')">
+    有休・遅刻・早退申請
+    <span class="desc">有給休暇・欠勤・特別休暇・遅刻・早退・中抜けを申請します</span>
   </button>
   <button class="type-choice" onclick="showSection('zangyou')">
     残業申請
     <span class="desc">残業の予定を事前に申請します</span>
   </button>
+  <button class="type-choice" onclick="showSection('shuusei')">
+    打刻修正依頼
+    <span class="desc">打刻ミスの修正を依頼します</span>
+  </button>
   <button class="type-choice" onclick="showSection('chokkouChokki')">
     直行直帰届
     <span class="desc">直行・直帰・出張を事前に届け出ます</span>
-  </button>
-  <button class="type-choice" onclick="showSection('yukyu')">
-    有休・遅刻・早退申請
-    <span class="desc">有給休暇・欠勤・特別休暇・遅刻・早退・中抜けを申請します</span>
   </button>
 </div>
 
@@ -415,11 +431,13 @@
   <div id="yukyuChikokuTimeArea" class="hidden">
     <label for="yukyuShukkinYotei">出勤予定時刻</label>
     <input type="time" id="yukyuShukkinYotei">
+    <a class="tool-link" href="#" onclick="openJikankyuTool(event)">🧮 時間休計算ツールを開く</a>
   </div>
 
   <div id="yukyuSoutaiTimeArea" class="hidden">
     <label for="yukyuTaikinYotei">退勤予定時刻</label>
     <input type="time" id="yukyuTaikinYotei">
+    <a class="tool-link" href="#" onclick="openJikankyuTool(event)">🧮 時間休計算ツールを開く</a>
   </div>
 
   <div id="yukyuNakanukeTimeArea" class="hidden">
@@ -427,6 +445,7 @@
     <input type="time" id="yukyuGaishutsuYotei">
     <label for="yukyuKishaYotei">帰社予定時刻</label>
     <input type="time" id="yukyuKishaYotei">
+    <a class="tool-link" href="#" onclick="openJikankyuTool(event)">🧮 時間休計算ツールを開く</a>
   </div>
 
   <div id="yukyuFukusuTimeArea" class="hidden">
@@ -439,6 +458,7 @@
     <input type="time" id="yukyuW2s">
     <label for="yukyuW2e">2つ目の終了時刻</label>
     <input type="time" id="yukyuW2e">
+    <a class="tool-link" href="#" onclick="openJikankyuTool(event)">🧮 時間休計算ツールを開く</a>
   </div>
 
   <div id="yukyuKisanArea" class="hidden">
@@ -558,6 +578,35 @@
     document.getElementById('signedInAs').textContent = 'ログイン中：' + myEmail;
     document.getElementById('loginCard').classList.add('hidden');
     showSection('select');
+    loadYukyuShoreiBanner();
+  }
+
+  // 時間休計算ツール（GAS mode=jikankyu、既存の休暇申請フォームからもリンクしていたツールを流用）
+  function openJikankyuTool(e) {
+    e.preventDefault();
+    window.open(GAS_URL + '?mode=jikankyu', '_blank');
+  }
+
+  // 有給奨励日の案内（既存のmode=yukyuShorei、タブレット打刻画面のバナーと同じデータ元）。
+  // 休暇申請フォームの案内文（60日以内）と同じ窓で、直近の該当日があれば「申請の種類を選ぶ」
+  // 画面の上部に表示する
+  function loadYukyuShoreiBanner() {
+    fetch(GAS_URL + '?mode=yukyuShorei')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success || !data.dates || data.dates.length === 0) return;
+        const windowEnd = new Date(); windowEnd.setDate(windowEnd.getDate() + 60);
+        const DOW_JP = ['日', '月', '火', '水', '木', '金', '土'];
+        const labels = data.dates
+          .map((d) => new Date(d.replace(/\//g, '-')))
+          .filter((d) => d <= windowEnd)
+          .map((d) => (d.getMonth() + 1) + '/' + d.getDate() + '(' + DOW_JP[d.getDay()] + ')');
+        if (labels.length === 0) return;
+        const el = document.getElementById('yukyuShoreiBanner');
+        el.textContent = '📅有給奨励日のご案内：' + labels.join('・') + 'は有給奨励日です。有給休暇取得にご協力ください。';
+        el.classList.remove('hidden');
+      })
+      .catch(() => {});
   }
 
   // ── セクション切り替え ──
