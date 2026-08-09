@@ -42,7 +42,7 @@
     font-weight: 600;
     margin: 18px 0 6px;
   }
-  select, input[type="date"], input[type="time"], textarea {
+  input[type="date"], input[type="time"], textarea {
     width: 100%;
     padding: 10px 12px;
     font-size: 15px;
@@ -57,6 +57,24 @@
     margin-top: 6px;
     min-height: 1.2em;
   }
+  .radio-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-pill {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14.5px;
+  }
+  .radio-pill:has(input:checked) {
+    border-color: #2E75B6;
+    background: #eaf2fa;
+    font-weight: 700;
+    color: #1F4E79;
+  }
+  .radio-pill input { accent-color: #2E75B6; width: 17px; height: 17px; }
   #submitBtn {
     width: 100%;
     margin-top: 26px;
@@ -135,7 +153,9 @@
   <div id="loginArea">
     <div id="g_id_onload"
          data-client_id="800178947678-ue8faa8jscidc84656i4ch1d4j0n9lks.apps.googleusercontent.com"
-         data-callback="handleCredentialResponse">
+         data-callback="handleCredentialResponse"
+         data-auto_select="true"
+         data-cancel_on_tap_outside="false">
     </div>
     <div class="g_id_signin" data-type="standard"></div>
   </div>
@@ -148,26 +168,24 @@
     <label for="taishouDate">修正対象日</label>
     <input type="date" id="taishouDate">
 
-    <label for="content">修正内容</label>
-    <select id="content">
-      <option value="">選択してください</option>
-      <option value="出勤時刻の修正">出勤時刻の修正</option>
-      <option value="退勤時刻の修正">退勤時刻の修正</option>
-      <option value="外出時刻の修正">外出時刻の修正</option>
-      <option value="帰社時刻の修正">帰社時刻の修正</option>
-      <option value="打刻の追加">打刻の追加</option>
-      <option value="打刻の削除">打刻の削除</option>
-    </select>
+    <label>修正内容</label>
+    <div class="radio-group" id="contentGroup">
+      <label class="radio-pill"><input type="radio" name="content" value="出勤時刻の修正"> 出勤時刻の修正</label>
+      <label class="radio-pill"><input type="radio" name="content" value="退勤時刻の修正"> 退勤時刻の修正</label>
+      <label class="radio-pill"><input type="radio" name="content" value="外出時刻の修正"> 外出時刻の修正</label>
+      <label class="radio-pill"><input type="radio" name="content" value="帰社時刻の修正"> 帰社時刻の修正</label>
+      <label class="radio-pill"><input type="radio" name="content" value="打刻の追加"> 打刻の追加</label>
+      <label class="radio-pill"><input type="radio" name="content" value="打刻の削除"> 打刻の削除</label>
+    </div>
 
     <div id="addTypeArea" class="hidden">
-      <label for="addType">対象の打刻種別</label>
-      <select id="addType">
-        <option value="">選択してください</option>
-        <option value="出勤">出勤</option>
-        <option value="退勤">退勤</option>
-        <option value="外出">外出</option>
-        <option value="帰社">帰社</option>
-      </select>
+      <label>対象の打刻種別</label>
+      <div class="radio-group" id="addTypeGroup">
+        <label class="radio-pill"><input type="radio" name="addType" value="出勤"> 出勤</label>
+        <label class="radio-pill"><input type="radio" name="addType" value="退勤"> 退勤</label>
+        <label class="radio-pill"><input type="radio" name="addType" value="外出"> 外出</label>
+        <label class="radio-pill"><input type="radio" name="addType" value="帰社"> 帰社</label>
+      </div>
     </div>
 
     <div id="timeArea">
@@ -204,6 +222,7 @@
 
   let idToken = null;
   let myEmail = null;
+  let editingAppId = null; // nullなら新規作成、appIdが入っていれば編集中
 
   const contentToDakokuType = {
     '出勤時刻の修正': '出勤',
@@ -212,7 +231,14 @@
     '帰社時刻の修正': '帰社',
   };
 
-  let editingAppId = null; // nullなら新規作成、appIdが入っていれば編集中
+  // ── ラジオボタンの値の読み書き用ヘルパー（selectのvalueと同じ感覚で使えるように） ──
+  function getRadioValue(name) {
+    const el = document.querySelector('input[name="' + name + '"]:checked');
+    return el ? el.value : '';
+  }
+  function setRadioValue(name, value) {
+    document.querySelectorAll('input[name="' + name + '"]').forEach((el) => { el.checked = (el.value === value); });
+  }
 
   function handleCredentialResponse(response) {
     idToken = response.credential;
@@ -263,8 +289,8 @@
   function startEditing(req) {
     editingAppId = req.appId;
     dateInput.value = req.taishouDate.replace(/\//g, '-');
-    contentSelect.value = req.content;
-    addTypeSelect.value = req.addType || '';
+    setRadioValue('content', req.content);
+    setRadioValue('addType', req.addType || '');
     jissaiTimeInput.value = req.jissaiTime || '';
     document.getElementById('riyu').value = req.riyu;
     updateFieldVisibility();
@@ -278,8 +304,8 @@
   function stopEditing() {
     editingAppId = null;
     dateInput.value = '';
-    contentSelect.value = '';
-    addTypeSelect.value = '';
+    setRadioValue('content', '');
+    setRadioValue('addType', '');
     jissaiTimeInput.value = '';
     document.getElementById('riyu').value = '';
     hintEl.textContent = '';
@@ -291,16 +317,14 @@
 
   document.getElementById('cancelEditBtn').addEventListener('click', stopEditing);
 
-  const contentSelect  = document.getElementById('content');
   const addTypeArea    = document.getElementById('addTypeArea');
-  const addTypeSelect  = document.getElementById('addType');
   const timeArea       = document.getElementById('timeArea');
   const jissaiTimeInput= document.getElementById('jissaiTime');
   const dateInput      = document.getElementById('taishouDate');
   const hintEl         = document.getElementById('actualPunchHint');
 
   function updateFieldVisibility() {
-    const content = contentSelect.value;
+    const content = getRadioValue('content');
     addTypeArea.classList.toggle('hidden', content !== '打刻の追加' && content !== '打刻の削除');
     timeArea.classList.toggle('hidden', content === '打刻の削除');
   }
@@ -308,7 +332,7 @@
   // 修正対象日・修正内容（○○時刻の修正）が両方揃ったら、現在の実打刻時刻を自動取得して
   // 入力欄に反映する（自動補正機能。ゼロから時刻を入力させない）
   function fetchActualPunch() {
-    const content     = contentSelect.value;
+    const content     = getRadioValue('content');
     const dakokuType  = contentToDakokuType[content];
     const dateStr     = dateInput.value; // yyyy-MM-dd
     hintEl.textContent = '';
@@ -330,13 +354,15 @@
       .catch(() => { hintEl.textContent = '確認中にエラーが発生しました。'; });
   }
 
-  contentSelect.addEventListener('change', () => { updateFieldVisibility(); fetchActualPunch(); });
+  document.querySelectorAll('input[name="content"]').forEach((r) => {
+    r.addEventListener('change', () => { updateFieldVisibility(); fetchActualPunch(); });
+  });
   dateInput.addEventListener('change', fetchActualPunch);
 
   document.getElementById('submitBtn').addEventListener('click', () => {
     const taishouDate = dateInput.value ? dateInput.value.replace(/-/g, '/') : '';
-    const content     = contentSelect.value;
-    const addType     = addTypeSelect.value;
+    const content     = getRadioValue('content');
+    const addType     = getRadioValue('addType');
     const jissaiTime  = jissaiTimeInput.value;
     const riyu        = document.getElementById('riyu').value.trim();
     const messageEl   = document.getElementById('message');
