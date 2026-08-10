@@ -630,14 +630,30 @@
     document.querySelectorAll('input[name="' + name + '"]').forEach((el) => { el.checked = (el.value === value); });
   }
 
+  // JWT（IDトークン）はBase64URL形式（標準Base64の「+」「/」がそれぞれ「-」「_」に置き換わり、
+  // 末尾の「=」パディングも省略される）でエンコードされている。標準Base64専用のatob()に
+  // そのまま渡すと、たまたま「-」「_」を含むトークンだけ例外で失敗する（2026-08-10発覚：
+  // 特定の社員だけログイン後に画面が進まない不具合の原因。トークンの中身〈メールアドレス等〉
+  // 次第でランダムに発生していた）。標準Base64に変換してからデコードする
+  function base64UrlDecode_(str) {
+    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    return atob(base64);
+  }
+
   function handleCredentialResponse(response) {
     idToken = response.credential;
     // ここでは画面表示用にトークンの中身をそのままデコードするだけ（改ざんされていても
     // 見た目が変わるだけで実害はない）。実際の本人確認は各API呼び出し時にGAS側
-    // （verifyGoogleToken_）が毎回トークンをGoogleに照会して行う（なりすまし防止）
-    const payload = JSON.parse(atob(idToken.split('.')[1]));
-    myEmail = payload.email;
-    document.getElementById('signedInAs').textContent = 'ログイン中：' + myEmail;
+    // （verifyGoogleToken_）が毎回トークンをGoogleに照会して行う（なりすまし防止）。
+    // デコード自体に失敗しても画面遷移は止めない（表示用の情報が取れないだけなので）
+    try {
+      const payload = JSON.parse(base64UrlDecode_(idToken.split('.')[1]));
+      myEmail = payload.email;
+      document.getElementById('signedInAs').textContent = 'ログイン中：' + myEmail;
+    } catch (e) {
+      document.getElementById('signedInAs').textContent = 'ログイン中';
+    }
     document.getElementById('loginCard').classList.add('hidden');
     showSection('select');
     loadYukyuShoreiBanner();
