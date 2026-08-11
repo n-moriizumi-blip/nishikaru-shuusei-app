@@ -535,6 +535,7 @@
     <a class="tool-link" href="#" onclick="openJikankyuTool(event)">🧮 時間休計算ツールを開く</a>
   </div>
 
+  <a class="tool-link hidden" href="#" id="yukyuAdjustTimeLink" onclick="toggleYukyuTimeAdjust(event)"></a>
   <p class="duration-preview hidden" id="yukyuDurationPreview"></p>
 
   <div id="yukyuKisanArea" class="hidden">
@@ -933,13 +934,32 @@
     const start = document.getElementById('zangyouStart').value;
     const end = document.getElementById('zangyouEnd').value;
     if (!start || !end) { el.classList.add('hidden'); return; }
-    let total = hhmmToMinJs(end) - hhmmToMinJs(start);
-    if (total <= 0) total += 24 * 60;
-    if (getRadioValue('hiruKyukei') === 'はい') total -= 45;
-    if (getRadioValue('gogoKyukei') === 'はい') total -= 15;
+    let rawSpan = hhmmToMinJs(end) - hhmmToMinJs(start); // 休憩を引く前、開始〜終了の実働時間
+    if (rawSpan <= 0) rawSpan += 24 * 60;
+    const hiruYes = getRadioValue('hiruKyukei') === 'はい';
+    const gogoYes = getRadioValue('gogoKyukei') === 'はい';
+    let total = rawSpan;
+    if (hiruYes) total -= 45;
+    if (gogoYes) total -= 15;
     total = Math.max(0, Math.round(total));
+
+    let html = '⏱ この内容だと 実残業 ' + Math.floor(total / 60) + '時間' + (total % 60) + '分の申請になります。';
+
+    // 休日出勤の休憩取得ルールに対する注意（2026-08-11新設）。昼休憩・午後休憩の質問が
+    // 表示されている＝休日出勤扱いの日のときだけ判定する。実働＝開始〜終了の生の時間
+    // （休憩を引く前）で判定するのは、既存のサーバー側チェック（processDakoku、打刻.gs）と
+    // 同じ考え方（実働6時間以上で休憩45分、8時間以上で休憩60分が必要）
+    const isHolidayWork = !document.getElementById('hiruKyukeiArea').classList.contains('hidden');
+    if (isHolidayWork) {
+      const kyukeiMin = (hiruYes ? 45 : 0) + (gogoYes ? 15 : 0);
+      if (rawSpan >= 8 * 60 && kyukeiMin < 60) {
+        html += '<br><span style="color:#B00020;">⚠️ 実働8時間以上のため、休憩60分（昼45分＋午後15分）以上の取得が必要です。</span>';
+      } else if (rawSpan >= 6 * 60 && kyukeiMin < 45) {
+        html += '<br><span style="color:#B00020;">⚠️ 実働6時間以上のため、休憩45分以上の取得が必要です。</span>';
+      }
+    }
     el.classList.remove('hidden');
-    el.textContent = '⏱ この内容だと 実残業 ' + Math.floor(total / 60) + '時間' + (total % 60) + '分の申請になります。';
+    el.innerHTML = html;
   }
   ['zangyouStart', 'zangyouEnd'].forEach((id) => {
     document.getElementById(id).addEventListener('input', updateZangyouDurationPreview);
@@ -1184,6 +1204,7 @@
   let yukyuEditingAppId = null;
   let myTeijiStart = '';
   let myTeijiEnd = '';
+  let yukyuTimeAdjustEnabled = false;
 
   // GAS側のroundJikankyuStart（ユーティリティ.gs）と同じ丸めルールをその場のプレビュー表示用に再現
   function hhmmToMinJs(hhmm) {
@@ -1237,6 +1258,7 @@
     document.getElementById('yukyuSoutaiTimeArea').classList.toggle('hidden', !(b.shinsei === '早退' && b.isTimeType));
     document.getElementById('yukyuNakanukeTimeArea').classList.toggle('hidden', !(b.shinsei === '中抜け' && b.isTimeType));
     document.getElementById('yukyuFukusuTimeArea').classList.toggle('hidden', !(b.shinsei === '遅刻・中抜け＋早退' && b.isTimeType));
+    applyYukyuTimeInputsState();
     updateYukyuDurationPreview();
 
     document.getElementById('yukyuKisanArea').classList.toggle('hidden', !b.isTokubetsu);
@@ -1251,6 +1273,36 @@
     document.getElementById('yukyuShoubyouArea').classList.toggle('hidden', !b.isShoubyou);
 
     document.getElementById('yukyuRiyuArea').classList.toggle('hidden', b.isTokubetsu);
+  }
+
+  // 事後申請の時刻欄は、既定では触れなくてよいようにしておく（実際の打刻時刻をそのまま
+  // 使うだけなら入力不要）。「実際の遅刻時間より多く有給を消化したい」場合だけ、リンクを
+  // 押して編集可能にする（2026-08-11新設）
+  function applyYukyuTimeInputsState() {
+    const jizenGo = getRadioValue('yukyuJizenGo');
+    const b = yukyuBranch();
+    const link = document.getElementById('yukyuAdjustTimeLink');
+    const ids = ['yukyuShukkinYotei', 'yukyuTaikinYotei', 'yukyuGaishutsuYotei', 'yukyuKishaYotei',
+                 'yukyuW1s', 'yukyuW1e', 'yukyuW2s', 'yukyuW2e'];
+    if (!b.isTimeType || jizenGo !== '事後') {
+      link.classList.add('hidden');
+      ids.forEach((id) => { document.getElementById(id).disabled = false; });
+      return;
+    }
+    link.classList.remove('hidden');
+    link.textContent = yukyuTimeAdjustEnabled
+      ? '↩ 実際の打刻時刻に戻す'
+      : '✏️ 実際の遅刻時間より多く有給を消化したい場合はこちら（時間を調整する）';
+    ids.forEach((id) => { document.getElementById(id).disabled = !yukyuTimeAdjustEnabled; });
+  }
+  function toggleYukyuTimeAdjust(e) {
+    e.preventDefault();
+    yukyuTimeAdjustEnabled = !yukyuTimeAdjustEnabled;
+    if (!yukyuTimeAdjustEnabled) {
+      fetchYukyuActualTimes(); // 「戻す」を選んだら実際の打刻を取得し直して上書きする
+    } else {
+      applyYukyuTimeInputsState();
+    }
   }
 
   document.querySelectorAll('input[name="yukyuJizenGo"], input[name="yukyuKbn"], input[name="yukyuShinsei"]').forEach((r) => {
@@ -1268,6 +1320,8 @@
   function fetchYukyuActualTimes() {
     const jizenGo = getRadioValue('yukyuJizenGo');
     const b = yukyuBranch();
+    yukyuTimeAdjustEnabled = false; // 対象が変わるたびに「調整モード」はリセットする
+    applyYukyuTimeInputsState();
     if (!b.isTimeType) return;
     const dateVal = document.getElementById('yukyuSingleDate').value;
     if (!dateVal || !idToken) return;
@@ -1437,6 +1491,7 @@
     yukyuEditingAppId = null;
     myTeijiStart = '';
     myTeijiEnd = '';
+    yukyuTimeAdjustEnabled = false;
     setRadioValue('yukyuJizenGo', '');
     setRadioValue('yukyuKbn', '');
     setRadioValue('yukyuShinsei', '');
