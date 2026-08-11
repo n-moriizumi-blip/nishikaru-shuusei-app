@@ -485,7 +485,7 @@
   <div id="yukyuShinseiArea" class="hidden">
     <label>申請種別</label>
     <div class="radio-group" id="yukyuShinseiGroup">
-      <label class="radio-pill"><input type="radio" name="yukyuShinsei" value="1日"> 1日</label>
+      <label class="radio-pill"><input type="radio" name="yukyuShinsei" value="1日"> 1日〜複数日</label>
       <label class="radio-pill yukyu-halfday-pill"><input type="radio" name="yukyuShinsei" value="午前休（0.5日）"> 午前休（0.5日）</label>
       <label class="radio-pill yukyu-halfday-pill"><input type="radio" name="yukyuShinsei" value="午後休（0.5日）"> 午後休（0.5日）</label>
       <label class="radio-pill"><input type="radio" name="yukyuShinsei" value="遅刻"> 遅刻</label>
@@ -1290,6 +1290,10 @@
     const link = document.getElementById('yukyuAdjustTimeLink');
     const ids = ['yukyuShukkinYotei', 'yukyuTaikinYotei', 'yukyuGaishutsuYotei', 'yukyuKishaYotei',
                  'yukyuW1s', 'yukyuW1e', 'yukyuW2s', 'yukyuW2e'];
+    const areaMap = {
+      '遅刻': 'yukyuChikokuTimeArea', '早退': 'yukyuSoutaiTimeArea',
+      '中抜け': 'yukyuNakanukeTimeArea', '遅刻・中抜け＋早退': 'yukyuFukusuTimeArea',
+    };
     if (!b.isTimeType || jizenGo !== '事後') {
       link.classList.add('hidden');
       ids.forEach((id) => { document.getElementById(id).disabled = false; });
@@ -1299,6 +1303,10 @@
     link.textContent = yukyuTimeAdjustEnabled
       ? '↩ 実際の打刻時刻に戻す'
       : '✏️ 実際の遅刻時間より多く有給を消化したい場合はこちら（時間を調整する）';
+    // 2026-08-11変更：非活性のグレー表示ではなく、押すまで欄自体を隠す方式に変更
+    // （「触らなくてよい」がより伝わりやすいというユーザー判断）
+    const areaId = areaMap[b.shinsei];
+    if (areaId) document.getElementById(areaId).classList.toggle('hidden', !yukyuTimeAdjustEnabled);
     ids.forEach((id) => { document.getElementById(id).disabled = !yukyuTimeAdjustEnabled; });
   }
   function toggleYukyuTimeAdjust(e) {
