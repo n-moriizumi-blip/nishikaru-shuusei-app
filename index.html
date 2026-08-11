@@ -192,6 +192,15 @@
     font-size: 12.5px;
     margin: 0 0 16px;
   }
+  .duration-preview {
+    background: #E4EAF0;
+    color: #1F3A52;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 10px;
+  }
   .tool-link {
     display: inline-block;
     font-size: 12.5px;
@@ -351,19 +360,25 @@
   <label for="zangyouEnd">予定終了時刻</label>
   <input type="time" id="zangyouEnd">
 
-  <label>昼休憩（45分間）を取りましたか？</label>
-  <p class="hint" style="margin-top:-2px;">※休日出勤の場合のみ回答してください（平日の残業では回答不要です）。休日出勤で実働6時間以上の場合は休憩45分以上、実働8時間以上の場合は休憩60分（45分＋15分）以上の取得が必要です。</p>
-  <div class="radio-group row" id="hiruKyukeiGroup">
-    <label class="radio-pill"><input type="radio" name="hiruKyukei" value="はい"> はい</label>
-    <label class="radio-pill"><input type="radio" name="hiruKyukei" value="いいえ"> いいえ</label>
+  <div id="hiruKyukeiArea" class="hidden">
+    <label>昼休憩（45分間）を取りましたか？</label>
+    <p class="hint" style="margin-top:-2px;">※休日出勤で実働6時間以上の場合は休憩45分以上、実働8時間以上の場合は休憩60分（45分＋15分）以上の取得が必要です。</p>
+    <div class="radio-group row" id="hiruKyukeiGroup">
+      <label class="radio-pill"><input type="radio" name="hiruKyukei" value="はい"> はい</label>
+      <label class="radio-pill"><input type="radio" name="hiruKyukei" value="いいえ"> いいえ</label>
+    </div>
   </div>
 
-  <label>午後休憩（15分間）を取りましたか？</label>
-  <p class="hint" style="margin-top:-2px;">※休日出勤の場合のみ回答してください（平日の残業では回答不要です）。休日出勤で実働6時間以上の場合は休憩45分以上、実働8時間以上の場合は休憩60分（45分＋15分）以上の取得が必要です。</p>
-  <div class="radio-group row" id="gogoKyukeiGroup">
-    <label class="radio-pill"><input type="radio" name="gogoKyukei" value="はい"> はい</label>
-    <label class="radio-pill"><input type="radio" name="gogoKyukei" value="いいえ"> いいえ</label>
+  <div id="gogoKyukeiArea" class="hidden">
+    <label>午後休憩（15分間）を取りましたか？</label>
+    <p class="hint" style="margin-top:-2px;">※休日出勤で実働6時間以上の場合は休憩45分以上、実働8時間以上の場合は休憩60分（45分＋15分）以上の取得が必要です。</p>
+    <div class="radio-group row" id="gogoKyukeiGroup">
+      <label class="radio-pill"><input type="radio" name="gogoKyukei" value="はい"> はい</label>
+      <label class="radio-pill"><input type="radio" name="gogoKyukei" value="いいえ"> いいえ</label>
+    </div>
   </div>
+
+  <p class="duration-preview hidden" id="zangyouDurationPreview"></p>
 
   <label for="zangyouRiyu">残業理由（社名・図番・内容）</label>
   <textarea id="zangyouRiyu" placeholder="例：〇〇社△△図面の追加加工のため"></textarea>
@@ -519,6 +534,8 @@
     <input type="time" id="yukyuW2e">
     <a class="tool-link" href="#" onclick="openJikankyuTool(event)">🧮 時間休計算ツールを開く</a>
   </div>
+
+  <p class="duration-preview hidden" id="yukyuDurationPreview"></p>
 
   <div id="yukyuKisanArea" class="hidden">
     <label for="yukyuKisan">起算日</label>
@@ -888,6 +905,49 @@
   // ============================================================
   let zangyouEditingAppId = null;
 
+  // 対象日が「休日出勤扱いになる日」かどうかをGAS側（isWorkday、集計.gsと同じ判定）に確認し、
+  // その日だけ昼休憩・午後休憩の質問を表示する（平日はそもそも質問自体を出さない）
+  function updateZangyouKyukeiVisibility() {
+    const dateVal = document.getElementById('zangyouDate').value;
+    const hiruArea = document.getElementById('hiruKyukeiArea');
+    const gogoArea = document.getElementById('gogoKyukeiArea');
+    if (!dateVal || !idToken) { hiruArea.classList.add('hidden'); gogoArea.classList.add('hidden'); return; }
+    const dateStr = dateVal.replace(/-/g, '/');
+    fetch(GAS_URL + '?mode=checkWorkday&token=' + encodeURIComponent(idToken) + '&date=' + encodeURIComponent(dateStr))
+      .then((r) => r.json())
+      .then((data) => {
+        const isHolidayWork = data.success && data.isWorkday === false;
+        hiruArea.classList.toggle('hidden', !isHolidayWork);
+        gogoArea.classList.toggle('hidden', !isHolidayWork);
+        if (!isHolidayWork) { setRadioValue('hiruKyukei', ''); setRadioValue('gogoKyukei', ''); }
+        updateZangyouDurationPreview();
+      })
+      .catch(() => {});
+  }
+  document.getElementById('zangyouDate').addEventListener('change', updateZangyouKyukeiVisibility);
+
+  // 入力中の開始・終了・休憩の回答から、送信するとどれくらいの実残業時間になるかをその場で
+  // 計算して表示する（GAS側のcalcJitsuZangyou、申請.gsと同じ計算）
+  function updateZangyouDurationPreview() {
+    const el = document.getElementById('zangyouDurationPreview');
+    const start = document.getElementById('zangyouStart').value;
+    const end = document.getElementById('zangyouEnd').value;
+    if (!start || !end) { el.classList.add('hidden'); return; }
+    let total = hhmmToMinJs(end) - hhmmToMinJs(start);
+    if (total <= 0) total += 24 * 60;
+    if (getRadioValue('hiruKyukei') === 'はい') total -= 45;
+    if (getRadioValue('gogoKyukei') === 'はい') total -= 15;
+    total = Math.max(0, Math.round(total));
+    el.classList.remove('hidden');
+    el.textContent = '⏱ この内容だと 実残業 ' + Math.floor(total / 60) + '時間' + (total % 60) + '分の申請になります。';
+  }
+  ['zangyouStart', 'zangyouEnd'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', updateZangyouDurationPreview);
+  });
+  document.querySelectorAll('input[name="hiruKyukei"], input[name="gogoKyukei"]').forEach((r) => {
+    r.addEventListener('change', updateZangyouDurationPreview);
+  });
+
   function loadZangyouRequests() {
     const listEl = document.getElementById('zangyouRequestsList');
     listEl.textContent = '読み込み中...';
@@ -926,6 +986,8 @@
     setRadioValue('hiruKyukei', req.hiruKyukei || '');
     setRadioValue('gogoKyukei', req.gogoKyukei || '');
     document.getElementById('zangyouRiyu').value = req.riyu;
+    updateZangyouKyukeiVisibility();
+    updateZangyouDurationPreview();
     document.getElementById('zangyouEditingNotice').style.display = 'block';
     document.getElementById('zangyouEditingNotice').textContent = '申請ID「' + req.appId + '」を編集中です。';
     document.getElementById('zangyouCancelEditBtn').classList.remove('hidden');
@@ -941,6 +1003,9 @@
     setRadioValue('hiruKyukei', '');
     setRadioValue('gogoKyukei', '');
     document.getElementById('zangyouRiyu').value = '';
+    document.getElementById('hiruKyukeiArea').classList.add('hidden');
+    document.getElementById('gogoKyukeiArea').classList.add('hidden');
+    document.getElementById('zangyouDurationPreview').classList.add('hidden');
     document.getElementById('zangyouEditingNotice').style.display = 'none';
     document.getElementById('zangyouCancelEditBtn').classList.add('hidden');
     document.getElementById('zangyouSubmitBtn').textContent = '送信';
@@ -1117,6 +1182,22 @@
   // 有休・遅刻・早退申請
   // ============================================================
   let yukyuEditingAppId = null;
+  let myTeijiStart = '';
+  let myTeijiEnd = '';
+
+  // GAS側のroundJikankyuStart（ユーティリティ.gs）と同じ丸めルールをその場のプレビュー表示用に再現
+  function hhmmToMinJs(hhmm) {
+    if (!hhmm) return NaN;
+    const parts = hhmm.split(':');
+    return Number(parts[0]) * 60 + Number(parts[1] || 0);
+  }
+  function floorTo15MinJs(min) { return Math.floor(min / 15) * 15; }
+  function ceilTo15MinJs(min)  { return Math.ceil(min / 15) * 15; }
+  function padHHMM(s) {
+    if (!s) return '';
+    const parts = s.split(':');
+    return String(parts[0]).padStart(2, '0') + ':' + String(parts[1] || '00').padStart(2, '0');
+  }
   const YUKYU_GROUP_KBN = ['通常有給', '欠勤控除', '欠勤控除（労災）'];
   const YUKYU_TIME_TYPES = ['遅刻', '早退', '中抜け', '遅刻・中抜け＋早退'];
 
@@ -1150,10 +1231,13 @@
     document.getElementById('yukyuSingleDateArea').classList.toggle('hidden', !b.isSingleDate && !b.isTimeType);
     document.getElementById('yukyuSingleDateLabel').textContent = b.isSingleDate ? '使用日' : '対象日';
 
-    document.getElementById('yukyuChikokuTimeArea').classList.toggle('hidden', !(b.shinsei === '遅刻' && b.isTimeType && jizenGo === '事前'));
-    document.getElementById('yukyuSoutaiTimeArea').classList.toggle('hidden', !(b.shinsei === '早退' && b.isTimeType && jizenGo === '事前'));
-    document.getElementById('yukyuNakanukeTimeArea').classList.toggle('hidden', !(b.shinsei === '中抜け' && b.isTimeType && jizenGo === '事前'));
-    document.getElementById('yukyuFukusuTimeArea').classList.toggle('hidden', !(b.shinsei === '遅刻・中抜け＋早退' && b.isTimeType && jizenGo === '事前'));
+    // 2026-08-11変更：事後でも時刻欄を表示する（対象日を選ぶと実際の打刻を自動入力した上で、
+    // 本人が編集できるようにする。「実際の遅刻時間より多く有給を消化したい」等の要望に対応）
+    document.getElementById('yukyuChikokuTimeArea').classList.toggle('hidden', !(b.shinsei === '遅刻' && b.isTimeType));
+    document.getElementById('yukyuSoutaiTimeArea').classList.toggle('hidden', !(b.shinsei === '早退' && b.isTimeType));
+    document.getElementById('yukyuNakanukeTimeArea').classList.toggle('hidden', !(b.shinsei === '中抜け' && b.isTimeType));
+    document.getElementById('yukyuFukusuTimeArea').classList.toggle('hidden', !(b.shinsei === '遅刻・中抜け＋早退' && b.isTimeType));
+    updateYukyuDurationPreview();
 
     document.getElementById('yukyuKisanArea').classList.toggle('hidden', !b.isTokubetsu);
     document.getElementById('yukyuKisanHint').textContent =
@@ -1170,8 +1254,97 @@
   }
 
   document.querySelectorAll('input[name="yukyuJizenGo"], input[name="yukyuKbn"], input[name="yukyuShinsei"]').forEach((r) => {
-    r.addEventListener('change', updateYukyuFieldVisibility);
+    r.addEventListener('change', () => { updateYukyuFieldVisibility(); fetchYukyuActualTimes(); });
   });
+  document.getElementById('yukyuSingleDate').addEventListener('change', fetchYukyuActualTimes);
+  ['yukyuShukkinYotei', 'yukyuTaikinYotei', 'yukyuGaishutsuYotei', 'yukyuKishaYotei',
+   'yukyuW1s', 'yukyuW1e', 'yukyuW2s', 'yukyuW2e'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', updateYukyuDurationPreview);
+  });
+
+  // 対象日・申請種別・事前/事後が揃うと、実際の打刻（mode=getActualPunch、定時も一緒に返す）を
+  // 取得する。事後の場合は取得した実績を時刻欄へ自動入力（本人が編集可能）、事前の場合は
+  // 定時だけをリアルタイム表示計算のために裏で保持する（本人の入力欄は書き換えない）
+  function fetchYukyuActualTimes() {
+    const jizenGo = getRadioValue('yukyuJizenGo');
+    const b = yukyuBranch();
+    if (!b.isTimeType) return;
+    const dateVal = document.getElementById('yukyuSingleDate').value;
+    if (!dateVal || !idToken) return;
+    const dateStr = dateVal.replace(/-/g, '/');
+    const isJigo = jizenGo === '事後';
+
+    const fetchOne = (dakokuType) => fetch(GAS_URL + '?mode=getActualPunch&token=' + encodeURIComponent(idToken) +
+      '&date=' + encodeURIComponent(dateStr) + '&dakokuType=' + encodeURIComponent(dakokuType))
+      .then((r) => r.json()).catch(() => ({ success: false }));
+
+    if (b.shinsei === '遅刻') {
+      fetchOne('出勤').then((data) => {
+        if (!data.success) return;
+        if (data.teijiStart) myTeijiStart = data.teijiStart;
+        if (isJigo && data.time) document.getElementById('yukyuShukkinYotei').value = padHHMM(data.time);
+        updateYukyuDurationPreview();
+      });
+    } else if (b.shinsei === '早退') {
+      fetchOne('退勤').then((data) => {
+        if (!data.success) return;
+        if (data.teijiEnd) myTeijiEnd = data.teijiEnd;
+        if (isJigo && data.time) document.getElementById('yukyuTaikinYotei').value = padHHMM(data.time);
+        updateYukyuDurationPreview();
+      });
+    } else if (b.shinsei === '中抜け') {
+      if (!isJigo) return; // 中抜けは定時に依存しないため、事前は自動取得の必要が無い
+      Promise.all([fetchOne('外出'), fetchOne('帰社')]).then(([g, k]) => {
+        if (g.success && g.time) document.getElementById('yukyuGaishutsuYotei').value = padHHMM(g.time);
+        if (k.success && k.time) document.getElementById('yukyuKishaYotei').value = padHHMM(k.time);
+        updateYukyuDurationPreview();
+      });
+    } else if (b.shinsei === '遅刻・中抜け＋早退') {
+      Promise.all([fetchOne('出勤'), fetchOne('退勤')]).then(([s, t]) => {
+        if (s.success && s.teijiStart) myTeijiStart = s.teijiStart;
+        if (t.success && t.teijiEnd) myTeijiEnd = t.teijiEnd;
+        if (isJigo) {
+          if (s.success && s.time) document.getElementById('yukyuW1e').value = padHHMM(s.time);
+          if (t.success && t.time) document.getElementById('yukyuW2s').value = padHHMM(t.time);
+          if (myTeijiStart) document.getElementById('yukyuW1s').value = padHHMM(myTeijiStart);
+          if (myTeijiEnd) document.getElementById('yukyuW2e').value = padHHMM(myTeijiEnd);
+        }
+        updateYukyuDurationPreview();
+      });
+    }
+  }
+
+  // 入力中の時刻から、送信するとどれくらいの時間になるかをその場で計算して表示する
+  // （GAS側のroundJikankyuStart・checkJikanWindowAnomalyと同じ丸め方向・合計計算）
+  function updateYukyuDurationPreview() {
+    const b = yukyuBranch();
+    const el = document.getElementById('yukyuDurationPreview');
+    if (!b.isTimeType) { el.classList.add('hidden'); return; }
+    let totalMin = null;
+    if (b.shinsei === '遅刻') {
+      const raw = document.getElementById('yukyuShukkinYotei').value;
+      if (raw && myTeijiStart) totalMin = ceilTo15MinJs(hhmmToMinJs(raw)) - hhmmToMinJs(myTeijiStart);
+    } else if (b.shinsei === '早退') {
+      const raw = document.getElementById('yukyuTaikinYotei').value;
+      if (raw && myTeijiEnd) totalMin = hhmmToMinJs(myTeijiEnd) - floorTo15MinJs(hhmmToMinJs(raw));
+    } else if (b.shinsei === '中抜け') {
+      const rawS = document.getElementById('yukyuGaishutsuYotei').value;
+      const rawE = document.getElementById('yukyuKishaYotei').value;
+      if (rawS && rawE) totalMin = ceilTo15MinJs(hhmmToMinJs(rawE)) - floorTo15MinJs(hhmmToMinJs(rawS));
+    } else if (b.shinsei === '遅刻・中抜け＋早退') {
+      const w1s = document.getElementById('yukyuW1s').value;
+      const w1e = document.getElementById('yukyuW1e').value;
+      const w2s = document.getElementById('yukyuW2s').value;
+      const w2e = document.getElementById('yukyuW2e').value;
+      let sum = 0, any = false;
+      if (w1s && w1e) { sum += ceilTo15MinJs(hhmmToMinJs(w1e)) - floorTo15MinJs(hhmmToMinJs(w1s)); any = true; }
+      if (w2s && w2e) { sum += ceilTo15MinJs(hhmmToMinJs(w2e)) - floorTo15MinJs(hhmmToMinJs(w2s)); any = true; }
+      if (any) totalMin = sum;
+    }
+    if (totalMin === null || isNaN(totalMin) || totalMin < 0) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.textContent = '⏱ この内容だと ' + Math.floor(totalMin / 60) + '時間' + (totalMin % 60) + '分の申請になります。';
+  }
 
   function loadYukyuRequests() {
     const listEl = document.getElementById('yukyuRequestsList');
@@ -1220,7 +1393,11 @@
       document.getElementById('yukyuSingleDate').value = req.startDate.replace(/\//g, '-');
     }
 
-    if (b.isTimeType && req.jizenGo === '事前') {
+    // 2026-08-11変更：事後でも時刻欄を編集できるようになったため、事前/事後を問わず
+    // 保存済みの時刻をそのまま復元する（このあとfetchYukyuActualTimes()が定時を取得し直す。
+    // 事後の場合はそこで実際の打刻も再取得されるが、同じ打刻データなら同じ値になるだけなので
+    // 実害は無い）
+    if (b.isTimeType) {
       if (req.shinsei === '遅刻') document.getElementById('yukyuShukkinYotei').value = req.w1e || '';
       if (req.shinsei === '早退') document.getElementById('yukyuTaikinYotei').value = req.w1s || '';
       if (req.shinsei === '中抜け') {
@@ -1233,6 +1410,7 @@
         document.getElementById('yukyuW2s').value = req.w2s || '';
         document.getElementById('yukyuW2e').value = req.w2e || '';
       }
+      fetchYukyuActualTimes();
     }
 
     document.getElementById('yukyuKisan').value = req.kisan ? req.kisan.replace(/\//g, '-') : '';
@@ -1257,6 +1435,8 @@
 
   function stopEditingYukyu() {
     yukyuEditingAppId = null;
+    myTeijiStart = '';
+    myTeijiEnd = '';
     setRadioValue('yukyuJizenGo', '');
     setRadioValue('yukyuKbn', '');
     setRadioValue('yukyuShinsei', '');
@@ -1324,7 +1504,7 @@
       riyu: document.getElementById('yukyuRiyu').value.trim(),
     };
 
-    if (b.isTimeType && jizenGo === '事前') {
+    if (b.isTimeType) {
       if (b.shinsei === '遅刻' && !payload.shukkinYotei) {
         messageEl.className = 'message err'; messageEl.textContent = '出勤予定時刻を入力してください。'; return;
       }
