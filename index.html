@@ -63,13 +63,24 @@
     color: #F2A900;
     font-size: 13px;
   }
-  input[type="date"], input[type="time"], textarea {
+  input[type="date"], input[type="time"], textarea, select {
     width: 100%;
     padding: 10px 12px;
     font-size: 15px;
     border: 1px solid #C7CDD3;
     border-radius: 10px;
     background: #fff;
+  }
+  /* 代理入力（総務専用）バナー：色を変えて「今誰の代わりに入力しているか」を常に意識できるようにする */
+  .dairi-banner {
+    background: #FFF2CC;
+    color: #7F6000;
+    border: 1px solid #E8D48A;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    margin: 12px 0;
   }
   input[type="date"]:disabled, input[type="time"]:disabled {
     background: #EDF0F3;
@@ -257,6 +268,14 @@
   </div>
   <div class="card-body">
     <p class="shorei-banner hidden" id="yukyuShoreiBanner"></p>
+    <div id="dairiPickerArea" class="hidden">
+      <label style="margin-top:0;">代理入力（総務専用）</label>
+      <select id="dairiSelect" onchange="onDairiChange()">
+        <option value="">本人（代理入力しない）</option>
+      </select>
+      <p class="hint">対象社員を選ぶと、以降の申請・打刻修正依頼はその社員の名義で登録・編集されます。</p>
+    </div>
+    <p class="dairi-banner hidden" id="dairiActiveBanner"></p>
     <label style="margin-top:0;">情報を見る</label>
     <button class="type-choice" onclick="showSection('myInfo')">
       マイページ
@@ -630,6 +649,47 @@
   let idToken = null;
   let myEmail = null;
 
+  // ── 代理入力（総務等が本人に代わって申請・修正依頼を送信・編集できる機能、2026-08-17新設）──
+  let isDairiAdminUser = false;
+  let dairiShainList = [];
+  let dairiEmail = ''; // 空＝本人。選択中は代理対象社員のメールアドレス
+
+  // GETリクエストに付け足す代理対象クエリ文字列（未選択なら空文字）
+  function dairiParam() {
+    return dairiEmail ? '&dairiEmail=' + encodeURIComponent(dairiEmail) : '';
+  }
+
+  function loadDairiInfo() {
+    fetch(GAS_URL + '?mode=checkDairiAdmin&token=' + encodeURIComponent(idToken))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success || !data.isDairiAdmin) return;
+        isDairiAdminUser = true;
+        dairiShainList = data.dairiShainList || [];
+        const sel = document.getElementById('dairiSelect');
+        dairiShainList.forEach((s) => {
+          const opt = document.createElement('option');
+          opt.value = s.email;
+          opt.textContent = s.name;
+          sel.appendChild(opt);
+        });
+        document.getElementById('dairiPickerArea').classList.remove('hidden');
+      })
+      .catch(() => {});
+  }
+
+  function onDairiChange() {
+    dairiEmail = document.getElementById('dairiSelect').value;
+    const banner = document.getElementById('dairiActiveBanner');
+    if (dairiEmail) {
+      const target = dairiShainList.find((s) => s.email === dairiEmail);
+      banner.textContent = '🔧 代理入力中：' + (target ? target.name : dairiEmail) + ' さんの名義で申請・編集します';
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+
   // スプレッドシート側（applyShinseiStatusColor／applyShuuseiStatusColor、コード.gs）と
   // 完全に同じ配色。2026-08-17、修正依頼シートのステータス文言を申請管理シートと統一した
   // ため（旧「対応済／対応中／対応待」は廃止）、1種類の配色だけで両方に対応する
@@ -679,6 +739,7 @@
     document.getElementById('loginCard').classList.add('hidden');
     showSection('select');
     loadYukyuShoreiBanner();
+    loadDairiInfo();
   }
 
   // 時間休計算ツール（GAS mode=jikankyu、既存の休暇申請フォームからもリンクしていたツールを流用）
@@ -754,7 +815,7 @@
   function loadShuuseiRequests() {
     const listEl = document.getElementById('shuuseiRequestsList');
     listEl.textContent = '読み込み中...';
-    fetch(GAS_URL + '?mode=myShuuseiRequests&token=' + encodeURIComponent(idToken))
+    fetch(GAS_URL + '?mode=myShuuseiRequests&token=' + encodeURIComponent(idToken) + dairiParam())
       .then((r) => r.json())
       .then((data) => {
         if (!data.success) { listEl.textContent = '取得できませんでした：' + data.error; return; }
@@ -835,7 +896,7 @@
     const dateStrSlash = dateStr.replace(/-/g, '/');
     actualPunchHintEl.textContent = '現在の打刻を確認中...';
     fetch(GAS_URL + '?mode=getActualPunch&token=' + encodeURIComponent(idToken) +
-      '&date=' + encodeURIComponent(dateStrSlash) + '&dakokuType=' + encodeURIComponent(dakokuType))
+      '&date=' + encodeURIComponent(dateStrSlash) + '&dakokuType=' + encodeURIComponent(dakokuType) + dairiParam())
       .then((r) => r.json())
       .then((data) => {
         if (!data.success) { actualPunchHintEl.textContent = '確認できませんでした：' + data.error; return; }
@@ -879,7 +940,7 @@
 
     const payload = isEditing
       ? { action: 'updateShuusei', token: idToken, appId: shuuseiEditingAppId, taishouDate, content, addType, jissaiTime, riyu }
-      : { action: 'submitShuusei', token: idToken, taishouDate, content, addType, jissaiTime, riyu };
+      : { action: 'submitShuusei', token: idToken, taishouDate, content, addType, jissaiTime, riyu, dairiEmail };
 
     // 2026-08-06：Content-Typeをapplication/jsonにするとCORSのプリフライト（OPTIONS）が
     // 発生し、GAS Web Appは対応していないため失敗する。文字列のままPOSTする
@@ -975,7 +1036,7 @@
   function loadZangyouRequests() {
     const listEl = document.getElementById('zangyouRequestsList');
     listEl.textContent = '読み込み中...';
-    fetch(GAS_URL + '?mode=myZangyouRequests&token=' + encodeURIComponent(idToken))
+    fetch(GAS_URL + '?mode=myZangyouRequests&token=' + encodeURIComponent(idToken) + dairiParam())
       .then((r) => r.json())
       .then((data) => {
         if (!data.success) { listEl.textContent = '取得できませんでした：' + data.error; return; }
@@ -1057,7 +1118,7 @@
 
     const payload = isEditing
       ? { action: 'updateZangyou', token: idToken, appId: zangyouEditingAppId, taishouDate, startTime, endTime, hiruKyukei, gogoKyukei, riyu }
-      : { action: 'submitZangyou', token: idToken, taishouDate, startTime, endTime, hiruKyukei, gogoKyukei, riyu };
+      : { action: 'submitZangyou', token: idToken, taishouDate, startTime, endTime, hiruKyukei, gogoKyukei, riyu, dairiEmail };
 
     fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
       .then((r) => r.json())
@@ -1099,7 +1160,7 @@
   function loadChokkouChokkiRequests() {
     const listEl = document.getElementById('chokkouChokkiRequestsList');
     listEl.textContent = '読み込み中...';
-    fetch(GAS_URL + '?mode=myChokkouChokkiRequests&token=' + encodeURIComponent(idToken))
+    fetch(GAS_URL + '?mode=myChokkouChokkiRequests&token=' + encodeURIComponent(idToken) + dairiParam())
       .then((r) => r.json())
       .then((data) => {
         if (!data.success) { listEl.textContent = '取得できませんでした：' + data.error; return; }
@@ -1180,7 +1241,7 @@
 
     const payload = isEditing
       ? { action: 'updateChokkouChokki', token: idToken, appId: chokkouChokkiEditingAppId, shinsei, startDate, endDate, shukkinTime, taikinTime, riyu }
-      : { action: 'submitChokkouChokki', token: idToken, shinsei, startDate, endDate, shukkinTime, taikinTime, riyu };
+      : { action: 'submitChokkouChokki', token: idToken, shinsei, startDate, endDate, shukkinTime, taikinTime, riyu, dairiEmail };
 
     fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
       .then((r) => r.json())
@@ -1341,7 +1402,7 @@
     const isJigo = jizenGo === '事後';
 
     const fetchOne = (dakokuType) => fetch(GAS_URL + '?mode=getActualPunch&token=' + encodeURIComponent(idToken) +
-      '&date=' + encodeURIComponent(dateStr) + '&dakokuType=' + encodeURIComponent(dakokuType))
+      '&date=' + encodeURIComponent(dateStr) + '&dakokuType=' + encodeURIComponent(dakokuType) + dairiParam())
       .then((r) => r.json()).catch(() => ({ success: false }));
 
     if (b.shinsei === '遅刻') {
@@ -1415,7 +1476,7 @@
   function loadYukyuRequests() {
     const listEl = document.getElementById('yukyuRequestsList');
     listEl.textContent = '読み込み中...';
-    fetch(GAS_URL + '?mode=myYukyuRequests&token=' + encodeURIComponent(idToken))
+    fetch(GAS_URL + '?mode=myYukyuRequests&token=' + encodeURIComponent(idToken) + dairiParam())
       .then((r) => r.json())
       .then((data) => {
         if (!data.success) { listEl.textContent = '取得できませんでした：' + data.error; return; }
@@ -1604,6 +1665,7 @@
 
     payload.action = isEditing ? 'updateYukyu' : 'submitYukyu';
     if (isEditing) payload.appId = yukyuEditingAppId;
+    else payload.dairiEmail = dairiEmail;
 
     fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) })
       .then((r) => r.json())
